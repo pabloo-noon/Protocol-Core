@@ -77,9 +77,9 @@ describe('StakingVaultOFTUpgradeable — stuck message reconciliation', function
     );
 
     // Sanity: vault holds the locked shares, user holds none.
-    expect(await StakingVault.balanceOf(await StakingVault.getAddress())).to.equal(
-      stakeAmount
-    );
+    expect(
+      await StakingVault.balanceOf(await StakingVault.getAddress())
+    ).to.equal(stakeAmount);
     expect(await StakingVault.balanceOf(await user.getAddress())).to.equal(0n);
   });
 
@@ -137,7 +137,10 @@ describe('StakingVaultOFTUpgradeable — stuck message reconciliation', function
       await StakingVault.requestHandleFixIssue(GUID_A, stakeAmount, REASON);
       await expect(
         StakingVault.requestHandleFixIssue(GUID_A, stakeAmount, REASON)
-      ).to.be.revertedWithCustomError(StakingVault, 'StuckMessageRequestExists');
+      ).to.be.revertedWithCustomError(
+        StakingVault,
+        'StuckMessageRequestExists'
+      );
     });
 
     it('rejects a re-request for an already-executed guid', async function () {
@@ -242,7 +245,10 @@ describe('StakingVaultOFTUpgradeable — stuck message reconciliation', function
       await increaseTime(STUCK_MESSAGE_TIMELOCK);
       await expect(
         StakingVault.validateExecuteHandleIssue(GUID_A)
-      ).to.be.revertedWithCustomError(StakingVault, 'InsufficientLockedBalance');
+      ).to.be.revertedWithCustomError(
+        StakingVault,
+        'InsufficientLockedBalance'
+      );
     });
 
     it('transfers escrowed shares to owner() and emits StuckMessageReconciled', async function () {
