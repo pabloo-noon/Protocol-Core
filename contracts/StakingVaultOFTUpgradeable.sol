@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -51,6 +52,7 @@ contract StakingVaultOFTUpgradeable is
     OFTUpgradeable,
     IStakingVaultUpgradeableHyperlane,
     StakingVaultStorageV1,
+    PausableUpgradeable,
     IMessageRecipient
 {
     using SafeERC20 for IERC20;
@@ -79,6 +81,7 @@ contract StakingVaultOFTUpgradeable is
         __ERC20_init(_name, _symbol);
         __AccessControl_init();
         __ReentrancyGuard_init();
+        __Pausable_init();
         __OFT_init(_name, _symbol, _owner);
         __Ownable_init(_owner);
 
@@ -95,6 +98,14 @@ contract StakingVaultOFTUpgradeable is
     function setRebaseManager(address _rebaseManager) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (_rebaseManager == address(0)) revert ZeroAddress();
         _grantRole(REBASE_MANAGER_ROLE, _rebaseManager);
+    }
+
+    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
     }
 
     function blacklistAccount(address account) external onlyRole(BLACKLIST_MANAGER_ROLE) {
@@ -144,7 +155,7 @@ contract StakingVaultOFTUpgradeable is
         rebase(amount);
     }
 
-    function rebase(uint256 _amount) public onlyRole(REBASE_MANAGER_ROLE) nonReentrant {
+    function rebase(uint256 _amount) public onlyRole(REBASE_MANAGER_ROLE) nonReentrant whenNotPaused {
         if (_amount == 0) revert CannotSetZero();
         if (totalSupply() == 0) revert NoSharesMinted();
 
@@ -246,7 +257,11 @@ contract StakingVaultOFTUpgradeable is
         return redeem(shares, receiver, owner);
     }
 
-    function _update(address from, address to, uint256 amount) internal virtual override(ERC20Upgradeable) {
+    function _update(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override(ERC20Upgradeable) whenNotPaused {
         StakingVaultStorage storage s = getStakingVaultStorage();
         if (s.blacklist[from] || s.blacklist[to]) revert BlacklistedAddress();
         super._update(from, to, amount);
