@@ -7,7 +7,7 @@ import 'solidity-coverage';
 import 'hardhat-contract-sizer';
 import './tasks';
 import { EventEmitter } from 'events';
-//import '@openzeppelin/hardhat-upgrades';
+import '@openzeppelin/hardhat-upgrades';
 
 import '@matterlabs/hardhat-zksync';
 import '@matterlabs/hardhat-zksync-upgradable';
@@ -26,23 +26,16 @@ function getWallet() {
 const config: HardhatUserConfig = {
   solidity: {
     eraVersion: '1.0.1',
-    version: process.env.SOLC_VERSION || '0.8.28',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 100,
+    compilers: [
+      {
+        version: process.env.SOLC_VERSION || '0.8.28',
+        settings: { optimizer: { enabled: true, runs: 100 } },
       },
-    },
-
-    /* {
+      {
         version: '0.8.20',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-        },
-      },*/
+        settings: { optimizer: { enabled: true, runs: 200 } },
+      },
+    ],
   },
   finder: {
     prettify: true,
@@ -191,36 +184,31 @@ const config: HardhatUserConfig = {
       url: process.env.ETHEREUM_MAINNET_RPC_URL || '',
       accounts: getWallet(),
     },
+    base: {
+      url: process.env.BASE_RPC_URL || 'https://mainnet.base.org',
+      chainId: 8453,
+      accounts: getWallet(),
+    },
+    citrea: {
+      url: process.env.CITREA_RPC_URL || 'https://rpc.mainnet.citrea.xyz',
+      chainId: 4114,
+      accounts: getWallet(),
+    },
+    berachain: {
+      url:
+        process.env.BERACHAIN_RPC_URL || 'https://berachain-rpc.publicnode.com',
+      chainId: 80094,
+      accounts: getWallet(),
+    },
   },
 
   etherscan: {
-    enabled: false,
-    apiKey: {
-      mainnet: process.env.ETHERSCAN_API_KEY || '',
-      arbitrumTestnet: process.env.ARBISCAN_API_KEY || '',
-      auroraTestnet: process.env.AURORA_API_KEY || '',
-      avalancheFujiTestnet: process.env.SNOWTRACE_API_KEY || '',
-      bscTestnet: process.env.BSCSCAN_API_KEY || '',
-      ftmTestnet: process.env.FTMSCAN_API_KEY || '',
-      harmonyTest: process.env.HARMONY_POPS_API_KEY || '',
-      hecoTestnet: process.env.HECOINFO_API_KEY || '',
-      goerli: process.env.GOERLI_ETHERSCAN_API_KEY || '',
-      sepolia: process.env.SEPOLIA_ETHERSCAN_API_KEY || '',
-      moonbaseAlpha: process.env.MOONSCAN_API_KEY || '',
-      polygonMumbai: process.env.POLYGONSCAN_API_KEY || '',
-      sokol: process.env.BLOCKSCOUT_API_KEY || '',
-      custom: process.env.CUSTOM_EXPLORER_API_KEY || '',
-      flare: process.env.FLARE_API_KEY || 'eazzeea',
-      morph: process.env.MORPH_API_KEY || 'eazzeea',
-      celo: process.env.CELO_API_KEY || 'azazz',
-      sophonTestnet: process.env.ETHERSCAN_SOPHON_API_KEY || '',
-      sophon:
-        process.env.ETHERSCAN_SOPHON_API_KEY ||
-        '1TNVYUKMX88WFMWNS5TE3B8SWR2M242AQ9',
-      zksync: 'DP9Z9FWY4K8V264KMBPQWA5A2BY48RYKS7',
-      zksyncmainnet: 'DP9Z9FWY4K8V264KMBPQWA5A2BY48RYKS7',
-      linea: 'B4SBBZSDG1JHTNRCDPXITV1GUQYGK9JP2I',
-    },
+    enabled: true,
+    // Etherscan V2: a single API key covers every Etherscan-family chain
+    // (mainnet, sepolia, base, berachain, arbitrum, polygon, ...).
+    // Non-Etherscan explorers (Blockscout: flare/morph/celo, zkSync verifier,
+    // citrea) resolve via `customChains` below and do not consume this key.
+    apiKey: process.env.ETHERSCAN_API_KEY || '',
     customChains: [
       {
         network: 'custom',
@@ -290,11 +278,29 @@ const config: HardhatUserConfig = {
           browserURL: 'https://explorer.zksync.io',
         },
       },
+      {
+        network: 'citrea',
+        chainId: 4114,
+        urls: {
+          apiURL: 'https://explorer.mainnet.citrea.xyz/api',
+          browserURL: 'https://explorer.mainnet.citrea.xyz',
+        },
+      },
+      {
+        network: 'berachain',
+        chainId: 80094,
+        urls: {
+          apiURL: 'https://api.etherscan.io/v2/api?chainid=80094',
+          browserURL: 'https://berascan.com',
+        },
+      },
     ],
   },
-  /*sourcify: {
-    enabled: true,
-  },*/
+  sourcify: {
+    // Sourcify's v1 API is in an extended brownout — disable so verification
+    // doesn't spam a 503 alongside Etherscan.
+    enabled: false,
+  },
   zksolc: {
     version: '1.5.7',
     compilerSource: 'binary',
