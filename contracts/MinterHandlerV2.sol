@@ -149,25 +149,10 @@ contract MinterHandlerV2 is IMinterHandlerV2, ReentrancyGuard, Pausable, AccessC
         }
 
         if (order.user != msg.sender) {
-            uint256 collateralDecimals = IERC20Metadata(order.collateralAddress).decimals();
-            uint256 usnDecimals = usnToken.decimals();
-
-            uint256 normalizedCollateralAmount = order.collateralAmount * 10 ** (18 - collateralDecimals);
-            uint256 normalizedUsnAmount = order.usnAmount * 10 ** (18 - usnDecimals);
-
-            uint256 difference;
-            if (normalizedCollateralAmount > normalizedUsnAmount) {
-                difference = normalizedCollateralAmount - normalizedUsnAmount;
-            } else {
-                difference = normalizedUsnAmount - normalizedCollateralAmount;
-            }
-
-            // Calculate 2% of the larger amount
-            uint256 twoPercent = (
-                normalizedCollateralAmount > normalizedUsnAmount ? normalizedCollateralAmount : normalizedUsnAmount
-            ) / 50;
-
-            if (difference > twoPercent) {
+            // One-sided oracle check: use the same price-aware ceiling as directMint so the
+            // order's usnAmount can never exceed what the deposited collateral is worth.
+            (, uint256 maxUsn) = _priceAndUsnCeiling(order.collateralAddress, order.collateralAmount);
+            if (order.usnAmount > maxUsn) {
                 revert CollateralUsnMismatch(order.collateralAmount, order.usnAmount);
             }
         }
@@ -222,20 +207,11 @@ contract MinterHandlerV2 is IMinterHandlerV2, ReentrancyGuard, Pausable, AccessC
         }
 
         // Verify price feed exists
-        address priceFeed = priceFeeds[collateralAddress];
-        if (priceFeed == address(0)) {
-            revert PriceFeedNotSet(collateralAddress);
-        }
-
         if (collateralAmount == 0) {
             revert ZeroAmount();
         }
 
-        // Get price from oracle
-        uint256 price = _getPrice(priceFeed);
-
-        // Calculate USN amount based on price logic
-        uint256 usnAmount = _calculateUsnAmount(collateralAddress, collateralAmount, price);
+        (uint256 price, uint256 usnAmount) = _priceAndUsnCeiling(collateralAddress, collateralAmount);
 
         // Slippage protection
         if (usnAmount < minUsnAmount) {
@@ -285,13 +261,18 @@ contract MinterHandlerV2 is IMinterHandlerV2, ReentrancyGuard, Pausable, AccessC
         address collateralAddress,
         uint256 collateralAmount
     ) external view returns (uint256 usnAmount, uint256 priceUsed) {
-        address priceFeed = priceFeeds[collateralAddress];
-        if (priceFeed == address(0)) {
-            revert PriceFeedNotSet(collateralAddress);
-        }
+        (priceUsed, usnAmount) = _priceAndUsnCeiling(collateralAddress, collateralAmount);
+    }
 
-        priceUsed = _getPrice(priceFeed);
-        usnAmount = _calculateUsnAmount(collateralAddress, collateralAmount, priceUsed);
+    function _priceAndUsnCeiling(address collateralAddress, uint256 collateralAmount)
+        internal
+        view
+        returns (uint256 price, uint256 usnAmount)
+    {
+        address priceFeed = priceFeeds[collateralAddress];
+        if (priceFeed == address(0)) revert PriceFeedNotSet(collateralAddress);
+        price = _getPrice(priceFeed);
+        usnAmount = _calculateUsnAmount(collateralAddress, collateralAmount, price);
     }
 
     /**

@@ -2,16 +2,24 @@ import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
-import { USN, MinterHandlerV2, MockERC20 } from '../typechain-types';
+import {
+  USN,
+  MinterHandlerV2,
+  MockERC20,
+  MockChainlinkPriceFeed,
+} from '../typechain-types';
 describe('MinterHandlerV2', () => {
   let usnToken: USN;
   let minterHandler: MinterHandlerV2;
   let mockCollateral: MockERC20;
+  let mockOracle: MockChainlinkPriceFeed;
   let owner: HardhatEthersSigner;
   let minter: HardhatEthersSigner;
   let user: HardhatEthersSigner;
   let nonWhitelistedUser: HardhatEthersSigner;
   let endpointV2Mock: Contract;
+
+  const ONE_USD = 10n ** 8n;
 
   beforeEach(async () => {
     [owner, minter, user, nonWhitelistedUser] = await ethers.getSigners();
@@ -27,6 +35,11 @@ describe('MinterHandlerV2', () => {
     const MockERC20Factory = await ethers.getContractFactory('MockERC20');
     mockCollateral = await MockERC20Factory.deploy('Mock Collateral', 'MCL');
 
+    const MockOracleFactory = await ethers.getContractFactory(
+      'MockChainlinkPriceFeed'
+    );
+    mockOracle = await MockOracleFactory.deploy(ONE_USD, 8);
+
     const MinterHandlerFactory =
       await ethers.getContractFactory('MinterHandlerV2');
     minterHandler = await MinterHandlerFactory.deploy(
@@ -41,6 +54,12 @@ describe('MinterHandlerV2', () => {
     // Add mock collateral to whitelist
     await minterHandler.addWhitelistedCollateral(
       await mockCollateral.getAddress()
+    );
+
+    // Register the price feed so signed-mint's oracle-based ceiling check has a source.
+    await minterHandler.setPriceFeed(
+      await mockCollateral.getAddress(),
+      await mockOracle.getAddress()
     );
   });
 
@@ -924,6 +943,60 @@ describe('MinterHandlerV2', () => {
     // Verify that tokens were minted
     expect(await usnToken.balanceOf(minter.address)).to.equal(amount);
   });
+  it('rejects any signed order that mints more USN than the oracle-priced collateral is worth', async () => {
+    // Peg oracle returns 1.00 → 100 collateral is worth 100 USN. Order asks for 101 USN.
+    // Under the previous symmetric 2% tolerance this passed (difference 1 <= 2% of 101 = 2.02).
+    const collateralAmount = ethers.parseUnits('100', 18);
+    const usnAmount = ethers.parseUnits('101', 18);
+    const nonce = 7;
+    const expiry = Math.floor(Date.now() / 1000) + 3600;
+    const order = {
+      message: `You are signing a request to mint ${usnAmount} USN using ${collateralAmount} MCL as collateral.`,
+      user: user.address,
+      collateralAmount: collateralAmount,
+      usnAmount: usnAmount,
+      nonce: nonce,
+      expiry: expiry,
+      collateralAddress: await mockCollateral.getAddress(),
+    };
+
+    const domain = {
+      name: 'MinterHandlerV2',
+      version: '1',
+      chainId: (await ethers.provider.getNetwork()).chainId,
+      verifyingContract: await minterHandler.getAddress(),
+    };
+    const types = {
+      Order: [
+        { name: 'message', type: 'string' },
+        { name: 'user', type: 'address' },
+        { name: 'collateralAmount', type: 'uint256' },
+        { name: 'usnAmount', type: 'uint256' },
+        { name: 'nonce', type: 'uint256' },
+        { name: 'expiry', type: 'uint256' },
+        { name: 'collateralAddress', type: 'address' },
+      ],
+    };
+
+    await minterHandler.grantRole(
+      await minterHandler.MINTER_ROLE(),
+      minter.address
+    );
+    await minterHandler.addWhitelistedUser(user.address);
+
+    const signature = await user.signTypedData(domain, types, order);
+    await mockCollateral.mint(user.address, collateralAmount);
+    await mockCollateral
+      .connect(user)
+      .approve(await minterHandler.getAddress(), collateralAmount);
+
+    await expect(minterHandler.connect(minter).mint(order, signature))
+      .to.be.revertedWithCustomError(minterHandler, 'CollateralUsnMismatch')
+      .withArgs(collateralAmount, usnAmount);
+
+    expect(await usnToken.balanceOf(user.address)).to.equal(0);
+  });
+
   it('should revert when minting with more than 2% difference for a random user', async () => {
     const collateralAmount = ethers.parseUnits('100', 18);
     const usnAmount = ethers.parseUnits('103', 18); //3% more than collateral
