@@ -23,9 +23,13 @@
  *   IMPL_<CHAIN>_<TOKEN>=0x...   LIMITER_<CHAIN>=0x...
  *
  * Usage:
- *   npx hardhat run scripts/propose-upgrade.ts                # all chains with deployed implementations
+ *   npx hardhat run scripts/propose-upgrade.ts                # all chains with deployed implementations → JSON files only
  *   CHAINS=base,bera npx hardhat run scripts/propose-upgrade.ts
  *   NO_LIMITER=true ...                                       # leave setRateLimiter out of the batch
+ *   PROPOSE=true ...                                          # also queue the batch in the Safe via the Transaction Service
+ *       needs SAFE_API_KEY and SAFE_PROPOSER_PRIVATE_KEY (an owner of the Safe) in .env;
+ *       phase 1 is proposed when nothing is scheduled, phase 2 once the delay has elapsed
+ *       (PROPOSE_PHASE=1|2 forces one). Citrea has no Safe service: JSON import only.
  *
  * Nothing is sent on-chain by this script; the Safe signers do that.
  */
@@ -38,6 +42,38 @@ dotenvConfig({ path: resolve(__dirname, '../.env') });
 
 const ONLY = process.env.CHAINS?.split(',').map((s) => s.trim().toLowerCase());
 const NO_LIMITER = process.env.NO_LIMITER === 'true';
+// PROPOSE=true: push each batch into the Safe's queue through the Safe
+// Transaction Service (SAFE_API_KEY), signed by SAFE_PROPOSER_PRIVATE_KEY —
+// which must be an owner of that Safe (the service rejects anything else).
+// Phase 2 is only proposed once the timelock delay has elapsed (or with
+// PROPOSE_PHASE=2 to force it).
+const PROPOSE = process.env.PROPOSE === 'true';
+const PROPOSE_PHASE = process.env.PROPOSE_PHASE; // '1' | '2' | undefined (auto)
+const SAFE_API_KEY = process.env.SAFE_API_KEY;
+const SAFE_PROPOSER_PK = process.env.SAFE_PROPOSER_PRIVATE_KEY;
+// Safe Transaction Service gateway slug per chain (Citrea is not served).
+const SAFE_SERVICE: Record<string, string | null> = {
+  ethereum: 'eth',
+  base: 'base',
+  hyperevm: 'hyperevm',
+  bera: 'berachain',
+  citrea: null,
+  zksync: 'zksync',
+};
+// Safe web UI chain prefixes, for the queue links printed after proposing.
+const SAFE_UI_PREFIX: Record<string, string> = {
+  ethereum: 'eth',
+  base: 'base',
+  hyperevm: 'hyperevm',
+  bera: 'berachain',
+  zksync: 'zksync',
+};
+// Canonical MultiSendCallOnly per Safe version (checked to have code on every chain above).
+const MULTISEND_CALL_ONLY: Record<string, string> = {
+  '1.4.1': '0x9641d764fc13c8B624c04430C7356C1C7C8102e2',
+  '1.3.0': '0x40A2aCCbd92BCA938b02010E17A5b8929b49130D',
+  'zksync-1.3.0': '0xf220D3b4DFb23C4ade8C88E526C1353AbAcbC38F',
+};
 const DEPLOYMENTS = resolve(__dirname, 'out/audited-implementations.json');
 const OUT_DIR = resolve(__dirname, 'out/safe');
 
@@ -168,6 +204,216 @@ const tx = (to: string, data: string): Tx => ({
   contractMethod: null,
   contractInputsValues: null,
 });
+
+// ── Safe Transaction Service proposer ──────────────────────────────────────
+
+const SAFE_ABI = [
+  'function getOwners() view returns (address[])',
+  'function VERSION() view returns (string)',
+  'function nonce() view returns (uint256)',
+  'function getTransactionHash(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, uint256 _nonce) view returns (bytes32)',
+];
+const MULTISEND_ABI = ['function multiSend(bytes transactions) payable'];
+const SAFE_TX_TYPES = {
+  SafeTx: [
+    { name: 'to', type: 'address' },
+    { name: 'value', type: 'uint256' },
+    { name: 'data', type: 'bytes' },
+    { name: 'operation', type: 'uint8' },
+    { name: 'safeTxGas', type: 'uint256' },
+    { name: 'baseGas', type: 'uint256' },
+    { name: 'gasPrice', type: 'uint256' },
+    { name: 'gasToken', type: 'address' },
+    { name: 'refundReceiver', type: 'address' },
+    { name: 'nonce', type: 'uint256' },
+  ],
+};
+
+// MultiSendCallOnly packs each call as: operation(1) | to(20) | value(32) | data.length(32) | data
+function encodeMultiSend(txs: Tx[]): string {
+  const packed = txs
+    .map((t) =>
+      ethers.solidityPacked(
+        ['uint8', 'address', 'uint256', 'uint256', 'bytes'],
+        [0, t.to, BigInt(t.value), (t.data.length - 2) / 2, t.data]
+      )
+    )
+    .map((h) => h.slice(2))
+    .join('');
+  return new ethers.Interface(MULTISEND_ABI).encodeFunctionData('multiSend', [
+    '0x' + packed,
+  ]);
+}
+
+async function safeApi(
+  chain: string,
+  path: string,
+  init?: RequestInit
+): Promise<any> {
+  const slug = SAFE_SERVICE[chain];
+  if (!slug)
+    throw new Error(
+      `${chain}: no Safe Transaction Service — import the JSON in the Safe UI`
+    );
+  const res = await fetch(
+    `https://api.safe.global/tx-service/${slug}/api${path}`,
+    {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${SAFE_API_KEY}`,
+        'content-type': 'application/json',
+        ...(init?.headers ?? {}),
+      },
+    }
+  );
+  const text = await res.text();
+  let body: any = text;
+  try {
+    body = JSON.parse(text);
+  } catch {}
+  if (!res.ok)
+    throw new Error(
+      `Safe service ${slug} ${path} → HTTP ${res.status}: ${typeof body === 'string' ? body.slice(0, 160) : JSON.stringify(body).slice(0, 160)}`
+    );
+  return body;
+}
+
+// Propose one Safe transaction (a single call, or a MultiSendCallOnly batch)
+// into the Safe's queue. Returns the safeTxHash, or the hash of an identical
+// pending proposal if one is already queued.
+async function proposeBatch(
+  p: ethers.Provider,
+  chain: { name: string; chainId: number },
+  safe: string,
+  label: string,
+  txs: Tx[]
+): Promise<string> {
+  if (!SAFE_API_KEY || !SAFE_PROPOSER_PK)
+    throw new Error(
+      'PROPOSE=true needs SAFE_API_KEY and SAFE_PROPOSER_PRIVATE_KEY'
+    );
+  const signer = new ethers.Wallet(SAFE_PROPOSER_PK, p);
+  const safeC = new ethers.Contract(safe, SAFE_ABI, p);
+  const owners: string[] = await safeC.getOwners();
+  const isOwner = owners
+    .map((o) => o.toLowerCase())
+    .includes(signer.address.toLowerCase());
+  let isDelegate = false;
+  if (!isOwner) {
+    // A registered delegate may propose too (its signature is not a confirmation).
+    const d = await safeApi(chain.name, `/v2/delegates/?safe=${safe}`);
+    isDelegate = (d.results ?? []).some(
+      (x: any) => x.delegate?.toLowerCase() === signer.address.toLowerCase()
+    );
+  }
+  if (!isOwner && !isDelegate)
+    throw new Error(
+      `${chain.name}: proposer ${signer.address} is neither an owner nor a delegate of Safe ${safe} (owners: ${owners.join(', ')})`
+    );
+  const version: string = await safeC.VERSION();
+
+  // Single call → direct; several → MultiSendCallOnly via delegatecall (operation 1).
+  let to: string, data: string, operation: number;
+  if (txs.length === 1) {
+    ({ to, data } = txs[0]);
+    operation = 0;
+  } else {
+    to =
+      chain.name === 'zksync'
+        ? MULTISEND_CALL_ONLY['zksync-1.3.0']
+        : (MULTISEND_CALL_ONLY[version] ?? MULTISEND_CALL_ONLY['1.4.1']);
+    if ((await p.getCode(to)) === '0x')
+      throw new Error(`${chain.name}: MultiSendCallOnly ${to} has no code`);
+    data = encodeMultiSend(txs);
+    operation = 1;
+  }
+
+  // Next nonce: on-chain nonce, or one past the highest queued proposal.
+  const info = await safeApi(chain.name, `/v1/safes/${safe}/`);
+  const queued = await safeApi(
+    chain.name,
+    `/v1/safes/${safe}/multisig-transactions/?executed=false&limit=50&ordering=-nonce`
+  );
+  const pending: any[] = queued.results ?? [];
+  const dup = pending.find(
+    (q) =>
+      q.to?.toLowerCase() === to.toLowerCase() &&
+      (q.data ?? '0x').toLowerCase() === data.toLowerCase() &&
+      Number(q.operation) === operation
+  );
+  if (dup) {
+    console.log(
+      `  ${label}: identical proposal already queued (nonce ${dup.nonce}, ${dup.confirmations?.length ?? 0}/${info.threshold} confirmations) — ${dup.safeTxHash}`
+    );
+    return dup.safeTxHash;
+  }
+  const nonce = Math.max(
+    Number(info.nonce),
+    pending.length ? Math.max(...pending.map((q) => Number(q.nonce))) + 1 : 0
+  );
+
+  const message = {
+    to,
+    value: 0n,
+    data,
+    operation,
+    safeTxGas: 0n,
+    baseGas: 0n,
+    gasPrice: 0n,
+    gasToken: ethers.ZeroAddress,
+    refundReceiver: ethers.ZeroAddress,
+    nonce: BigInt(nonce),
+  };
+  const domain = { chainId: chain.chainId, verifyingContract: safe };
+  const safeTxHash = ethers.TypedDataEncoder.hash(
+    domain,
+    SAFE_TX_TYPES,
+    message
+  );
+  // Cross-check our EIP-712 encoding against the Safe contract itself.
+  const onchainHash: string = await safeC.getTransactionHash(
+    to,
+    0,
+    data,
+    operation,
+    0,
+    0,
+    0,
+    ethers.ZeroAddress,
+    ethers.ZeroAddress,
+    nonce
+  );
+  if (onchainHash !== safeTxHash)
+    throw new Error(
+      `${chain.name}: safeTxHash mismatch (local ${safeTxHash}, Safe ${onchainHash})`
+    );
+  const signature = await signer.signTypedData(domain, SAFE_TX_TYPES, message);
+
+  await safeApi(chain.name, `/v1/safes/${safe}/multisig-transactions/`, {
+    method: 'POST',
+    body: JSON.stringify({
+      to,
+      value: '0',
+      data,
+      operation,
+      safeTxGas: '0',
+      baseGas: '0',
+      gasPrice: '0',
+      gasToken: ethers.ZeroAddress,
+      refundReceiver: ethers.ZeroAddress,
+      nonce,
+      contractTransactionHash: safeTxHash,
+      sender: signer.address,
+      signature,
+      origin: `propose-upgrade.ts ${label}`,
+    }),
+  });
+  const prefix = SAFE_UI_PREFIX[chain.name];
+  console.log(
+    `  ✓ proposed ${label} as nonce ${nonce} (${isOwner ? `1/${info.threshold} signed by owner` : `0/${info.threshold} — proposed by delegate`} ${signer.address})\n    ${safeTxHash}\n    https://app.safe.global/transactions/queue?safe=${prefix}:${safe}`
+  );
+  return safeTxHash;
+}
 
 async function rpcChainId(rpc: string): Promise<number> {
   const ctl = new AbortController();
@@ -414,6 +660,42 @@ async function main() {
         `  phase 2 executable from ${new Date(readyAt * 1000).toISOString()}`
       );
     for (const n of notes) console.log(`  ! ${n}`);
+
+    if (PROPOSE) {
+      if (!SAFE_SERVICE[chain.name]) {
+        console.log(
+          `  ${chain.name}: Safe Transaction Service not available — use the JSON files above`
+        );
+        continue;
+      }
+      try {
+        const wantPhase1 = PROPOSE_PHASE
+          ? PROPOSE_PHASE === '1'
+          : phase1.length > 0;
+        const wantPhase2 = PROPOSE_PHASE
+          ? PROPOSE_PHASE === '2'
+          : phase1.length === 0 &&
+            phase2.length > 0 &&
+            readyAt > 0 &&
+            now >= readyAt;
+        if (wantPhase1 && phase1.length)
+          await proposeBatch(
+            p,
+            chain,
+            safe,
+            `${chain.name} 1-schedule`,
+            phase1
+          );
+        if (wantPhase2 && phase2.length)
+          await proposeBatch(p, chain, safe, `${chain.name} 2-execute`, phase2);
+        if (!wantPhase1 && !wantPhase2)
+          console.log(
+            `  nothing to propose yet${readyAt && now < readyAt ? ` (phase 2 executable from ${new Date(readyAt * 1000).toISOString()})` : ''}`
+          );
+      } catch (e: any) {
+        console.log(`  ✗ propose failed: ${String(e?.message).slice(0, 300)}`);
+      }
+    }
   }
   console.log(
     '\nImport each JSON in the Safe UI: Apps → Transaction Builder → "load batch". Phase 2 files can be prepared now but will revert until the delay has elapsed.'
