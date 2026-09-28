@@ -29,7 +29,7 @@
  *   PROPOSE=true ...                                          # also queue the batch in the Safe via the Transaction Service
  *       needs SAFE_API_KEY and SAFE_PROPOSER_PRIVATE_KEY (an owner of the Safe) in .env;
  *       phase 1 is proposed when nothing is scheduled, phase 2 once the delay has elapsed
- *       (PROPOSE_PHASE=1|2 forces one). Citrea has no Safe service: JSON import only.
+ *       (PROPOSE_PHASE=1|2 forces one). HyperEVM and Citrea have no Safe service: JSON import only.
  *   REGISTER_DELEGATE=true SAFE_OWNER_PRIVATE_KEY=0x... ...        # one-off: an owner registers the proposer key as a delegate
  *
  * Nothing is sent on-chain by this script; the Safe signers do that.
@@ -52,11 +52,12 @@ const PROPOSE = process.env.PROPOSE === 'true';
 const PROPOSE_PHASE = process.env.PROPOSE_PHASE; // '1' | '2' | undefined (auto)
 const SAFE_API_KEY = process.env.SAFE_API_KEY;
 const SAFE_PROPOSER_PK = process.env.SAFE_PROPOSER_PRIVATE_KEY;
-// Safe Transaction Service gateway slug per chain (Citrea is not served).
+// Safe Transaction Service gateway slug per chain. HyperEVM and Citrea have
+// no service (every route 404s): JSON import in the Safe UI only.
 const SAFE_SERVICE: Record<string, string | null> = {
   ethereum: 'eth',
   base: 'base',
-  hyperevm: 'hyperevm',
+  hyperevm: null,
   bera: 'berachain',
   citrea: null,
   zksync: 'zksync',
