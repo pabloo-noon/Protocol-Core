@@ -342,14 +342,22 @@ async function withRetry<T>(
       return await fn();
     } catch (e: any) {
       last = e;
-      const msg = String(e?.shortMessage ?? e?.message ?? e);
+      // Surface the RPC's own words: ethers hides them behind "could not coalesce error".
+      const inner = e?.info?.error?.message ?? e?.error?.message ?? '';
+      const method = e?.payload?.method ?? e?.info?.payload?.method ?? '';
+      const msg = `${String(e?.shortMessage ?? e?.message ?? e)}${inner ? ` — ${inner}` : ''}${method ? ` [${method}]` : ''}`;
+      if (/insufficient funds|exceeds the balance|balance too low/i.test(msg)) {
+        throw new Error(
+          `${what}: ${msg}\n    The node checks gasLimit × maxFeePerGas against the balance, not the effective price — top up the deployer.`
+        );
+      }
       const transient =
         /Internal error|-32603|429|timeout|ETIMEDOUT|ECONNRESET|SERVER_ERROR|coalesce/i.test(
           msg
         );
       if (!transient || i === tries) throw e;
       console.log(
-        `    ${what}: transient RPC error (${msg.slice(0, 60)}) — retry ${i}/${tries - 1} in ${5 * i}s`
+        `    ${what}: transient RPC error (${msg.slice(0, 140)}) — retry ${i}/${tries - 1} in ${5 * i}s`
       );
       await sleep(5000 * i);
     }
