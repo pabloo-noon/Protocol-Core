@@ -30,6 +30,7 @@
  *       needs SAFE_API_KEY and SAFE_PROPOSER_PRIVATE_KEY (an owner of the Safe) in .env;
  *       phase 1 is proposed when nothing is scheduled, phase 2 once the delay has elapsed
  *       (PROPOSE_PHASE=1|2 forces one). Citrea has no Safe service: JSON import only.
+ *   REGISTER_DELEGATE=true SAFE_OWNER_PRIVATE_KEY=0x... ...        # one-off: an owner registers the proposer key as a delegate
  *
  * Nothing is sent on-chain by this script; the Safe signers do that.
  */
@@ -278,6 +279,107 @@ async function safeApi(
   return body;
 }
 
+async function isSafeDelegate(
+  chain: string,
+  safe: string,
+  who: string
+): Promise<boolean> {
+  for (const path of [
+    `/v2/delegates/?safe=${safe}`,
+    `/v1/delegates/?safe=${safe}`,
+  ]) {
+    try {
+      const d = await safeApi(chain, path);
+      return (d.results ?? []).some(
+        (x: any) => x.delegate?.toLowerCase() === who.toLowerCase()
+      );
+    } catch (e: any) {
+      if (!/HTTP 404/.test(String(e?.message))) throw e;
+    }
+  }
+  return false;
+}
+
+// REGISTER_DELEGATE=true: an owner (SAFE_OWNER_PRIVATE_KEY) registers
+// SAFE_PROPOSER_PRIVATE_KEY's address as a delegate of the Safe, once per
+// chain. Signature is the service's EIP-712 "Delegate" message (v2), with
+// the v1 eth_sign fallback for services that do not have the v2 route.
+async function registerDelegate(
+  p: ethers.Provider,
+  chain: { name: string; chainId: number },
+  safe: string
+) {
+  const ownerPk = process.env.SAFE_OWNER_PRIVATE_KEY;
+  if (!ownerPk || !SAFE_PROPOSER_PK)
+    throw new Error(
+      'REGISTER_DELEGATE=true needs SAFE_OWNER_PRIVATE_KEY and SAFE_PROPOSER_PRIVATE_KEY'
+    );
+  const owner = new ethers.Wallet(ownerPk, p);
+  const delegate = new ethers.Wallet(SAFE_PROPOSER_PK).address;
+  const owners: string[] = await new ethers.Contract(
+    safe,
+    SAFE_ABI,
+    p
+  ).getOwners();
+  if (!owners.map((o) => o.toLowerCase()).includes(owner.address.toLowerCase()))
+    throw new Error(
+      `${chain.name}: SAFE_OWNER_PRIVATE_KEY ${owner.address} is not an owner of ${safe}`
+    );
+  if (await isSafeDelegate(chain.name, safe, delegate)) {
+    console.log(`  ${delegate} is already a delegate of ${safe}`);
+    return;
+  }
+  const totp = Math.floor(Date.now() / 1000 / 3600);
+  const label = process.env.DELEGATE_LABEL ?? 'propose-upgrade';
+  try {
+    const signature = await owner.signTypedData(
+      {
+        name: 'Safe Transaction Service',
+        version: '1.0',
+        chainId: chain.chainId,
+      },
+      {
+        Delegate: [
+          { name: 'delegateAddress', type: 'address' },
+          { name: 'totp', type: 'uint256' },
+        ],
+      },
+      { delegateAddress: delegate, totp }
+    );
+    await safeApi(chain.name, `/v2/delegates/`, {
+      method: 'POST',
+      body: JSON.stringify({
+        safe,
+        delegate,
+        delegator: owner.address,
+        label,
+        signature,
+      }),
+    });
+  } catch (e: any) {
+    if (!/HTTP 404/.test(String(e?.message))) throw e;
+    // v1: eth_sign over keccak256(delegate + totp)
+    const signature = await owner.signMessage(
+      ethers.getBytes(
+        ethers.keccak256(ethers.toUtf8Bytes(`${delegate}${totp}`))
+      )
+    );
+    await safeApi(chain.name, `/v1/delegates/`, {
+      method: 'POST',
+      body: JSON.stringify({
+        safe,
+        delegate,
+        delegator: owner.address,
+        label,
+        signature,
+      }),
+    });
+  }
+  console.log(
+    `  ✓ registered ${delegate} as delegate of ${safe} (by owner ${owner.address})`
+  );
+}
+
 // Propose one Safe transaction (a single call, or a MultiSendCallOnly batch)
 // into the Safe's queue. Returns the safeTxHash, or the hash of an identical
 // pending proposal if one is already queued.
@@ -301,10 +403,7 @@ async function proposeBatch(
   let isDelegate = false;
   if (!isOwner) {
     // A registered delegate may propose too (its signature is not a confirmation).
-    const d = await safeApi(chain.name, `/v2/delegates/?safe=${safe}`);
-    isDelegate = (d.results ?? []).some(
-      (x: any) => x.delegate?.toLowerCase() === signer.address.toLowerCase()
-    );
+    isDelegate = await isSafeDelegate(chain.name, safe, signer.address);
   }
   if (!isOwner && !isDelegate)
     throw new Error(
@@ -660,6 +759,16 @@ async function main() {
         `  phase 2 executable from ${new Date(readyAt * 1000).toISOString()}`
       );
     for (const n of notes) console.log(`  ! ${n}`);
+
+    if (process.env.REGISTER_DELEGATE === 'true' && SAFE_SERVICE[chain.name]) {
+      try {
+        await registerDelegate(p, chain, safe);
+      } catch (e: any) {
+        console.log(
+          `  ✗ delegate registration failed: ${String(e?.message).slice(0, 200)}`
+        );
+      }
+    }
 
     if (PROPOSE) {
       if (!SAFE_SERVICE[chain.name]) {
