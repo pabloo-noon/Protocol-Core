@@ -26,6 +26,7 @@
  *     DEPLOY_LIMITER=false ...                                                   # skip BridgeRateLimiter
  *     VERIFY=false ... / VERIFY_DELAY_SECONDS=30                                  # explorer verification runs inline after each deploy
  *     LIMITER_ETHEREUM=0x... (LIMITER_<CHAIN>)                                     # resume: reuse a limiter from an interrupted run
+ *     IMPL_ETHEREUM_USN=0x... (IMPL_<CHAIN>_<TOKEN>)                               # resume: reuse an implementation from an interrupted run
  *   zkSync (hardhat-zksync Deployer, this network only):
  *     [BROADCAST=true] npx hardhat run scripts/deploy-audited-implementations.ts --network zksync
  *
@@ -536,6 +537,18 @@ async function runEvm(pk: string) {
       );
     }
     for (const plan of chainPlans) {
+      // Resume: reuse an implementation deployed by an earlier (interrupted) run.
+      const existing =
+        process.env[
+          `IMPL_${chain.name.toUpperCase()}_${plan.token.toUpperCase()}`
+        ];
+      if (existing) {
+        plan.newImpl = ethers.getAddress(existing);
+        plan.limiter = limiter;
+        console.log(`  ${plan.contract} (existing) ${plan.newImpl}`);
+        await checkDeployed(p, plan, signer.address);
+        continue;
+      }
       const art = await hre.artifacts.readArtifact(plan.contract);
       const c = await withRetry(`deploy ${plan.contract}`, async () => {
         const d = await new ethers.ContractFactory(
