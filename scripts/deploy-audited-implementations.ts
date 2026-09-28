@@ -28,6 +28,7 @@
  *     LIMITER_ETHEREUM=0x... (LIMITER_<CHAIN>)                                     # resume: reuse a limiter from an interrupted run
  *     IMPL_ETHEREUM_USN=0x... (IMPL_<CHAIN>_<TOKEN>)                               # resume: reuse an implementation from an interrupted run
  *     DEPLOY_GAS_LIMIT=8000000                                                    # override the gas limit (default: estimate + 25%)
+ *     PRIORITY_FEE_GWEI=0.1                                                       # EIP-1559 tip (max fee = 2×base + tip); needed where the RPC reports tip 0
  *   zkSync (hardhat-zksync Deployer, this network only):
  *     [BROADCAST=true] npx hardhat run scripts/deploy-audited-implementations.ts --network zksync
  *
@@ -330,6 +331,18 @@ async function checkDeployed(p: ethers.Provider, plan: Plan, from: string) {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// EIP-1559 fees set explicitly: some RPCs (Infura) report a 0 priority fee,
+// which ethers then signs with and nodes reject ("gas tip cap 0"). Tip is
+// PRIORITY_FEE_GWEI (default 0.1), max fee = 2 × base fee + tip.
+async function feeOverrides(p: ethers.Provider) {
+  const blk = await p.getBlock('latest');
+  const base = blk?.baseFeePerGas ?? 0n;
+  if (base === 0n) return {}; // legacy-fee chain, let ethers decide
+  const tip = ethers.parseUnits(process.env.PRIORITY_FEE_GWEI ?? '0.1', 'gwei');
+  const maxFee = base * 2n + tip;
+  return { maxPriorityFeePerGas: tip, maxFeePerGas: maxFee };
+}
+
 // Public/shared RPCs return transient errors (-32603 "Internal error", 429,
 // timeouts). Retry a few times before giving up so one hiccup does not abort
 // a multi-chain run half way.
@@ -521,7 +534,7 @@ async function runEvm(pk: string) {
           art.abi,
           art.bytecode,
           signer
-        ).deploy(limiterOwner);
+        ).deploy(limiterOwner, await feeOverrides(p));
         await d.waitForDeployment();
         return d;
       });
@@ -563,11 +576,12 @@ async function runEvm(pk: string) {
       const gasLimit = process.env.DEPLOY_GAS_LIMIT
         ? BigInt(process.env.DEPLOY_GAS_LIMIT)
         : (est * 125n) / 100n;
+      const fees = await feeOverrides(p);
       console.log(
         `  ${plan.contract}: gas estimate ${est}, sending with gasLimit ${gasLimit}`
       );
       const c = await withRetry(`deploy ${plan.contract}`, async () => {
-        const d = await factory.deploy(...plan.ctorArgs, { gasLimit });
+        const d = await factory.deploy(...plan.ctorArgs, { gasLimit, ...fees });
         await d.waitForDeployment();
         return d;
       });
