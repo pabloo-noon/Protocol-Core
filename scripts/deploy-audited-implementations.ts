@@ -24,6 +24,7 @@
  *     BROADCAST=true npx hardhat run scripts/deploy-audited-implementations.ts   # deploy
  *     CHAINS=base,bera ...                                                       # restrict
  *     DEPLOY_LIMITER=false ...                                                   # skip BridgeRateLimiter
+ *     VERIFY=false ... / VERIFY_DELAY_SECONDS=30                                  # explorer verification runs inline after each deploy
  *   zkSync (hardhat-zksync Deployer, this network only):
  *     [BROADCAST=true] npx hardhat run scripts/deploy-audited-implementations.ts --network zksync
  *
@@ -34,6 +35,7 @@ import { config as dotenvConfig } from 'dotenv';
 import { ethers } from 'ethers';
 import * as fs from 'fs';
 import * as hre from 'hardhat';
+import { spawnSync } from 'child_process';
 import { resolve } from 'path';
 
 dotenvConfig({ path: resolve(__dirname, '../.env') });
@@ -41,6 +43,17 @@ dotenvConfig({ path: resolve(__dirname, '../.env') });
 const BROADCAST = process.env.BROADCAST === 'true';
 const DEPLOY_LIMITER = process.env.DEPLOY_LIMITER !== 'false';
 const ONLY = process.env.CHAINS?.split(',').map((s) => s.trim().toLowerCase());
+const VERIFY = process.env.VERIFY !== 'false'; // verify on the explorer right after deploying
+const VERIFY_DELAY_MS = Number(process.env.VERIFY_DELAY_SECONDS ?? '30') * 1000;
+// chain name → hardhat network name (verify needs a configured network)
+const HH_NETWORK: Record<string, string> = {
+  ethereum: 'mainnet',
+  base: 'base',
+  hyperevm: 'hyperevm',
+  citrea: 'citrea',
+  bera: 'bera',
+  zksync: 'zksync',
+};
 const OUT = resolve(__dirname, 'out/audited-implementations.json');
 
 const IMPL_SLOT =
@@ -312,11 +325,53 @@ async function checkDeployed(p: ethers.Provider, plan: Plan, from: string) {
   );
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Runs `hardhat verify` in a child process so it can target a different
+// network than the one this script was started on. Never throws: a failed
+// verification is reported and the manual command is printed.
+async function verifyOnExplorer(
+  chain: string,
+  source: string,
+  contract: string,
+  address: string,
+  ctorArgs: string[]
+) {
+  const net = HH_NETWORK[chain];
+  const cmd =
+    `npx hardhat verify --network ${net} --contract ${source}:${contract} ${address} ${ctorArgs.join(' ')}`.trim();
+  if (!VERIFY) {
+    console.log(`    verify manually: ${cmd}`);
+    return;
+  }
+  console.log(`    verifying on ${net} (after ${VERIFY_DELAY_MS / 1000}s)…`);
+  await sleep(VERIFY_DELAY_MS);
+  const r = spawnSync(
+    'npx',
+    [
+      'hardhat',
+      'verify',
+      '--network',
+      net,
+      '--contract',
+      `${source}:${contract}`,
+      address,
+      ...ctorArgs,
+    ],
+    { encoding: 'utf8', env: process.env }
+  );
+  const out = (r.stdout + r.stderr).replace(/\x1b\[[0-9;]*m/g, '');
+  if (r.status === 0 || /already verified|Already Verified/i.test(out)) {
+    console.log(`    ✓ verified ${address}`);
+  } else {
+    const last = out.trim().split('\n').slice(-3).join(' | ').slice(0, 300);
+    console.log(`    ✗ verify failed: ${last}`);
+    console.log(`      retry: ${cmd}`);
+  }
+}
+
 function printRunbook(plan: Plan) {
   console.log(`\n  ${plan.chain} ${plan.token} — hand-off`);
-  console.log(
-    `    verify:   npx hardhat verify --contract ${plan.source}:${plan.contract} ${plan.newImpl} ${plan.ctorArgs.join(' ')}`
-  );
   console.log(
     `    1) ProxyAdmin ${plan.proxyAdmin} (owner ${plan.proxyAdminOwner})`
   );
@@ -421,8 +476,12 @@ async function runEvm(pk: string) {
       console.log(
         `  BridgeRateLimiter → ${limiter} (${c.deploymentTransaction()?.hash})`
       );
-      console.log(
-        `    verify:   npx hardhat verify --contract contracts/BridgeRateLimiter.sol:BridgeRateLimiter ${limiter} ${limiterOwner}`
+      await verifyOnExplorer(
+        chain.name,
+        'contracts/BridgeRateLimiter.sol',
+        'BridgeRateLimiter',
+        limiter,
+        [limiterOwner]
       );
     }
     for (const plan of chainPlans) {
@@ -438,6 +497,13 @@ async function runEvm(pk: string) {
       plan.limiter = limiter;
       console.log(`  ${plan.contract} → ${plan.newImpl} (${plan.txHash})`);
       await checkDeployed(p, plan, signer.address);
+      await verifyOnExplorer(
+        chain.name,
+        plan.source,
+        plan.contract,
+        plan.newImpl,
+        plan.ctorArgs
+      );
     }
     for (const plan of chainPlans) printRunbook(plan);
     plans.push(...chainPlans);
@@ -485,6 +551,13 @@ async function runZksync(pk: string) {
     );
     limiter = await c.getAddress();
     console.log(`  BridgeRateLimiter → ${limiter}`);
+    await verifyOnExplorer(
+      'zksync',
+      'contracts/BridgeRateLimiter.sol',
+      'BridgeRateLimiter',
+      limiter,
+      [limiterOwner]
+    );
   }
   for (const plan of chainPlans) {
     const c = await deployer.deploy(
@@ -496,6 +569,13 @@ async function runZksync(pk: string) {
     plan.limiter = limiter;
     console.log(`  ${plan.contract} → ${plan.newImpl} (${plan.txHash})`);
     await checkDeployed(p, plan, await wallet.getAddress());
+    await verifyOnExplorer(
+      'zksync',
+      plan.source,
+      plan.contract,
+      plan.newImpl!,
+      plan.ctorArgs
+    );
   }
   for (const plan of chainPlans) printRunbook(plan);
   save(chainPlans);
