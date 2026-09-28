@@ -27,6 +27,7 @@
  *     VERIFY=false ... / VERIFY_DELAY_SECONDS=30                                  # explorer verification runs inline after each deploy
  *     LIMITER_ETHEREUM=0x... (LIMITER_<CHAIN>)                                     # resume: reuse a limiter from an interrupted run
  *     IMPL_ETHEREUM_USN=0x... (IMPL_<CHAIN>_<TOKEN>)                               # resume: reuse an implementation from an interrupted run
+ *     DEPLOY_GAS_LIMIT=8000000                                                    # override the gas limit (default: estimate + 25%)
  *   zkSync (hardhat-zksync Deployer, this network only):
  *     [BROADCAST=true] npx hardhat run scripts/deploy-audited-implementations.ts --network zksync
  *
@@ -550,12 +551,23 @@ async function runEvm(pk: string) {
         continue;
       }
       const art = await hre.artifacts.readArtifact(plan.contract);
+      // Explicit gas limit: estimateGas is exact-fit and nodes simulate the
+      // send against the current block, so a 23 KB code deposit can trip
+      // "creation code storage out of gas" with the bare estimate. Use the
+      // estimate + 25% margin, or DEPLOY_GAS_LIMIT if set.
+      const factory = new ethers.ContractFactory(art.abi, art.bytecode, signer);
+      const est = await p.estimateGas({
+        from: signer.address,
+        data: (await factory.getDeployTransaction(...plan.ctorArgs)).data,
+      });
+      const gasLimit = process.env.DEPLOY_GAS_LIMIT
+        ? BigInt(process.env.DEPLOY_GAS_LIMIT)
+        : (est * 125n) / 100n;
+      console.log(
+        `  ${plan.contract}: gas estimate ${est}, sending with gasLimit ${gasLimit}`
+      );
       const c = await withRetry(`deploy ${plan.contract}`, async () => {
-        const d = await new ethers.ContractFactory(
-          art.abi,
-          art.bytecode,
-          signer
-        ).deploy(...plan.ctorArgs);
+        const d = await factory.deploy(...plan.ctorArgs, { gasLimit });
         await d.waitForDeployment();
         return d;
       });
