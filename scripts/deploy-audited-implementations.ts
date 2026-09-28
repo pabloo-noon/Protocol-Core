@@ -25,6 +25,7 @@
  *     CHAINS=base,bera ...                                                       # restrict
  *     DEPLOY_LIMITER=false ...                                                   # skip BridgeRateLimiter
  *     VERIFY=false ... / VERIFY_DELAY_SECONDS=30                                  # explorer verification runs inline after each deploy
+ *     LIMITER_ETHEREUM=0x... (LIMITER_<CHAIN>)                                     # resume: reuse a limiter from an interrupted run
  *   zkSync (hardhat-zksync Deployer, this network only):
  *     [BROADCAST=true] npx hardhat run scripts/deploy-audited-implementations.ts --network zksync
  *
@@ -327,6 +328,35 @@ async function checkDeployed(p: ethers.Provider, plan: Plan, from: string) {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Public/shared RPCs return transient errors (-32603 "Internal error", 429,
+// timeouts). Retry a few times before giving up so one hiccup does not abort
+// a multi-chain run half way.
+async function withRetry<T>(
+  what: string,
+  fn: () => Promise<T>,
+  tries = 4
+): Promise<T> {
+  let last: any;
+  for (let i = 1; i <= tries; i++) {
+    try {
+      return await fn();
+    } catch (e: any) {
+      last = e;
+      const msg = String(e?.shortMessage ?? e?.message ?? e);
+      const transient =
+        /Internal error|-32603|429|timeout|ETIMEDOUT|ECONNRESET|SERVER_ERROR|coalesce/i.test(
+          msg
+        );
+      if (!transient || i === tries) throw e;
+      console.log(
+        `    ${what}: transient RPC error (${msg.slice(0, 60)}) — retry ${i}/${tries - 1} in ${5 * i}s`
+      );
+      await sleep(5000 * i);
+    }
+  }
+  throw last;
+}
+
 // Runs `hardhat verify` in a child process so it can target a different
 // network than the one this script was started on. Never throws: a failed
 // verification is reported and the manual command is printed.
@@ -463,15 +493,28 @@ async function runEvm(pk: string) {
       continue;
     }
 
-    let limiter: string | undefined;
-    if (DEPLOY_LIMITER) {
+    let limiter: string | undefined =
+      process.env[`LIMITER_${chain.name.toUpperCase()}`];
+    if (limiter) {
+      // Resume: reuse a limiter deployed by an earlier (interrupted) run.
+      limiter = ethers.getAddress(limiter);
+      const owner = await new ethers.Contract(limiter, ABI, p).owner();
+      if (owner.toLowerCase() !== limiterOwner.toLowerCase())
+        throw new Error(
+          `LIMITER_${chain.name.toUpperCase()} ${limiter} is owned by ${owner}, expected ${limiterOwner}`
+        );
+      console.log(`  BridgeRateLimiter (existing) ${limiter}, owner ok`);
+    } else if (DEPLOY_LIMITER) {
       const art = await hre.artifacts.readArtifact('BridgeRateLimiter');
-      const c = await new ethers.ContractFactory(
-        art.abi,
-        art.bytecode,
-        signer
-      ).deploy(limiterOwner);
-      await c.waitForDeployment();
+      const c = await withRetry('deploy BridgeRateLimiter', async () => {
+        const d = await new ethers.ContractFactory(
+          art.abi,
+          art.bytecode,
+          signer
+        ).deploy(limiterOwner);
+        await d.waitForDeployment();
+        return d;
+      });
       limiter = await c.getAddress();
       console.log(
         `  BridgeRateLimiter → ${limiter} (${c.deploymentTransaction()?.hash})`
@@ -486,12 +529,15 @@ async function runEvm(pk: string) {
     }
     for (const plan of chainPlans) {
       const art = await hre.artifacts.readArtifact(plan.contract);
-      const c = await new ethers.ContractFactory(
-        art.abi,
-        art.bytecode,
-        signer
-      ).deploy(...plan.ctorArgs);
-      await c.waitForDeployment();
+      const c = await withRetry(`deploy ${plan.contract}`, async () => {
+        const d = await new ethers.ContractFactory(
+          art.abi,
+          art.bytecode,
+          signer
+        ).deploy(...plan.ctorArgs);
+        await d.waitForDeployment();
+        return d;
+      });
       plan.newImpl = await c.getAddress();
       plan.txHash = c.deploymentTransaction()?.hash;
       plan.limiter = limiter;
@@ -507,8 +553,8 @@ async function runEvm(pk: string) {
     }
     for (const plan of chainPlans) printRunbook(plan);
     plans.push(...chainPlans);
+    save(chainPlans); // per chain, so an abort later keeps this chain's addresses
   }
-  save(plans);
 }
 
 async function runZksync(pk: string) {
@@ -543,8 +589,11 @@ async function runZksync(pk: string) {
     save(chainPlans);
     return;
   }
-  let limiter: string | undefined;
-  if (DEPLOY_LIMITER) {
+  let limiter: string | undefined = process.env.LIMITER_ZKSYNC;
+  if (limiter) {
+    limiter = ethers.getAddress(limiter);
+    console.log(`  BridgeRateLimiter (existing) ${limiter}`);
+  } else if (DEPLOY_LIMITER) {
     const c = await deployer.deploy(
       await deployer.loadArtifact('BridgeRateLimiter'),
       [limiterOwner]
