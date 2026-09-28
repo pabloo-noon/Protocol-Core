@@ -195,6 +195,21 @@ const config: HardhatUserConfig = {
       chainId: 239,
       accounts: getWallet(),
     },
+    hyperevm: {
+      url: process.env.HYPEREVM_RPC_URL || 'https://rpc.hyperliquid.xyz/evm',
+      chainId: 999,
+      accounts: getWallet(),
+    },
+    citrea: {
+      url: process.env.CITREA_RPC_URL || 'https://rpc.mainnet.citrea.xyz',
+      chainId: 4114,
+      accounts: getWallet(),
+    },
+    bera: {
+      url: process.env.BERACHAIN_RPC_URL || 'https://rpc.berachain.com',
+      chainId: 80094,
+      accounts: getWallet(),
+    },
   },
 
   // Etherscan V2 unified API — a single ETHERSCAN_API_KEY works for every
@@ -278,6 +293,33 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: 'https://block-explorer-api.mainnet.zksync.io/api',
           browserURL: 'https://explorer.zksync.io',
+        },
+      },
+      // Etherscan V2 chains not in hardhat-verify's built-in list: same
+      // ETHERSCAN_API_KEY, routed by chainid.
+      {
+        network: 'hyperevm',
+        chainId: 999,
+        urls: {
+          apiURL: 'https://api.etherscan.io/v2/api?chainid=999',
+          browserURL: 'https://hyperevmscan.io',
+        },
+      },
+      {
+        network: 'bera',
+        chainId: 80094,
+        urls: {
+          apiURL: 'https://api.etherscan.io/v2/api?chainid=80094',
+          browserURL: 'https://berascan.com',
+        },
+      },
+      // Blockscout
+      {
+        network: 'citrea',
+        chainId: 4114,
+        urls: {
+          apiURL: 'https://explorer.mainnet.citrea.xyz/api',
+          browserURL: 'https://explorer.mainnet.citrea.xyz',
         },
       },
     ],
