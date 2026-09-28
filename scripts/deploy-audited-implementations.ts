@@ -29,6 +29,7 @@
  *     IMPL_ETHEREUM_USN=0x... (IMPL_<CHAIN>_<TOKEN>)                               # resume: reuse an implementation from an interrupted run
  *     DEPLOY_GAS_LIMIT=8000000                                                    # override the gas limit (default: estimate + 25%)
  *     PRIORITY_FEE_GWEI=0.1                                                       # EIP-1559 tip (max fee = 2×base + tip); needed where the RPC reports tip 0
+ *     MAX_FEE_GWEI=3                                                              # cap maxFeePerGas (bounds the balance reservation gasLimit × maxFee)
  *   zkSync (hardhat-zksync Deployer, this network only):
  *     [BROADCAST=true] npx hardhat run scripts/deploy-audited-implementations.ts --network zksync
  *
@@ -339,7 +340,15 @@ async function feeOverrides(p: ethers.Provider) {
   const base = blk?.baseFeePerGas ?? 0n;
   if (base === 0n) return {}; // legacy-fee chain, let ethers decide
   const tip = ethers.parseUnits(process.env.PRIORITY_FEE_GWEI ?? '0.1', 'gwei');
-  const maxFee = base * 2n + tip;
+  // MAX_FEE_GWEI caps what the node reserves (gasLimit × maxFee) from the
+  // balance; the tx just waits in the pool if the base fee is above it.
+  const maxFee = process.env.MAX_FEE_GWEI
+    ? ethers.parseUnits(process.env.MAX_FEE_GWEI, 'gwei')
+    : base * 2n + tip;
+  if (maxFee < base + tip)
+    console.log(
+      `    note: MAX_FEE_GWEI ${process.env.MAX_FEE_GWEI} is below base fee ${ethers.formatUnits(base, 'gwei')} — the tx will wait until the base fee drops`
+    );
   return { maxPriorityFeePerGas: tip, maxFeePerGas: maxFee };
 }
 
