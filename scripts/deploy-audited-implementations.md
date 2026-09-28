@@ -27,18 +27,24 @@ holding `hyperlaneEnabled`; no migration, no initializer call on upgrade.
 
 ## Who signs what
 
-| chain    | ProxyAdmin (USN / sUSN)       | ProxyAdmin owner (signs upgrades) | token owner Safe (signs `setRateLimiter`, owns the limiter) |
-| -------- | ----------------------------- | --------------------------------- | ----------------------------------------------------------- |
-| Ethereum | `0x55f3…8239` / `0x1908…BD81` | `0xE5e4…5A7F`                     | `0x1ea1…327f` (3-of-6)                                      |
-| Base     | `0xdDC0…98A7`                 | `0xA9BB…5e85`                     | `0xf56d…592D` (3-of-5)                                      |
-| HyperEVM | `0xdDC0…98A7`                 | `0x73D5…550d`                     | `0x3D6B…C5b8` (3-of-5)                                      |
-| Citrea   | `0x55f3…8239`                 | `0xf6f4…3fac`                     | `0xB2aD…Fc80` (3-of-5)                                      |
-| Bera     | `0x55f3…8239`                 | `0xea84…0A02`                     | `0x94E9…3C58` (3-of-5)                                      |
-| zkSync   | `0x5a82…6f11` / `0x5130…decc` | `0x15d9…a263` (3-of-4)            | `0x15d9…a263` (3-of-4)                                      |
+On Ethereum, Base, HyperEVM, Citrea and Bera the ProxyAdmin is owned by an
+**upgrade Timelock** (`contracts/periphery/Timelock.sol`), itself owned by the
+chain's token Safe. Upgrades there are two Safe transactions separated by the
+delay: `Timelock.scheduleUpgrade(...)`, wait, `Timelock.executeUpgrade(...)`.
+On zkSync the Safe owns the ProxyAdmin directly (one `upgradeAndCall`).
 
-All ProxyAdmins are OpenZeppelin v5 (`upgradeAndCall(proxy, impl, 0x)`).
-The script reads every address above from chain state at run time and
-prints the exact calldata; the table is for orientation.
+| chain    | ProxyAdmin (USN / sUSN)       | upgrade Timelock (delay) | Safe (owns the Timelock and the token; signs everything) |
+| -------- | ----------------------------- | ------------------------ | -------------------------------------------------------- |
+| Ethereum | `0x55f3…8239` / `0x1908…BD81` | `0xE5e4…5A7F` (48h)      | `0x1ea1…327f` (3-of-6)                                   |
+| Base     | `0xdDC0…98A7`                 | `0xA9BB…5e85` (48h)      | `0xf56d…592D` (3-of-5)                                   |
+| HyperEVM | `0xdDC0…98A7`                 | `0x73D5…550d` (24h)      | `0x3D6B…C5b8` (3-of-5)                                   |
+| Citrea   | `0x55f3…8239`                 | `0xf6f4…3fac` (48h)      | `0xB2aD…Fc80` (3-of-5)                                   |
+| Bera     | `0x55f3…8239`                 | `0xea84…0A02` (48h)      | `0x94E9…3C58` (3-of-5)                                   |
+| zkSync   | `0x5a82…6f11` / `0x5130…decc` | — (Safe owns ProxyAdmin) | `0x15d9…a263` (3-of-4)                                   |
+
+`scripts/propose-upgrade.ts` reads all of this from chain state, checks each
+upgrade's timelock status, and writes ready-to-import Safe Transaction Builder
+batches to `scripts/out/safe/<chain>-1-schedule.json` / `<chain>-2-execute.json`.
 
 ## Steps
 
@@ -80,14 +86,26 @@ prints the exact calldata; the table is for orientation.
    `setEnforcedOptions([{eid: 30101, msgType: 1, options: 0x000301001101000000000000000000000000000249f0}])`
    (= 150 000). Check the front-end `extraOptions` for Ethereum → zkSync too.
 
-7. **Upgrade** — one transaction per proxy from the ProxyAdmin owner:
-   `ProxyAdmin.upgradeAndCall(proxy, newImpl, 0x)` (calldata printed by the
-   script). No initializer call. Order does not matter across chains.
+7. **Propose the upgrades** — generate the Safe batches:
 
-8. **Wire the limiter** — from the token owner Safe, per proxy, batched:
-   `token.setRateLimiter(limiter)` and `limiter.setRateLimits(token, [...])`.
-   Until `setRateLimiter` is called the token behaves exactly as today
-   (unlimited); until `setRateLimits` is called a wired token is also
+   ```
+   npx hardhat run scripts/propose-upgrade.ts            # all chains with a deployed implementation
+   CHAINS=base,bera npx hardhat run scripts/propose-upgrade.ts
+   ```
+
+   Timelock chains: import `<chain>-1-schedule.json` in the Safe
+   (Apps → Transaction Builder → load batch), sign and execute. It calls
+   `Timelock.scheduleUpgrade(proxyAdmin, proxy, newImpl, 0x)`. Re-running the
+   script afterwards shows the exact time each upgrade becomes executable.
+   zkSync: `zksync-1-schedule.json` is the whole upgrade
+   (`ProxyAdmin.upgradeAndCall` + `setRateLimiter`), no waiting.
+
+8. **After the delay — execute and wire the limiter**: import
+   `<chain>-2-execute.json`. It calls `Timelock.executeUpgrade(...)` and then
+   `token.setRateLimiter(limiter)` in the same batch (the setter only exists
+   on the new implementation, so it has to come after the upgrade). Then
+   `limiter.setRateLimits(token, [...])` from the same Safe with the limits
+   you decide. Until `setRateLimits` is called a wired token is still
    unlimited. See the README section on `BridgeRateLimiter` for the
    semantics and the kill switch.
 
