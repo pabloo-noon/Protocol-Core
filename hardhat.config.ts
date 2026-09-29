@@ -313,7 +313,13 @@ const config: HardhatUserConfig = {
           browserURL: 'https://berascan.com',
         },
       },
-      // Blockscout
+    ],
+  },
+  // Citrea's explorer is Blockscout, not Etherscan-compatible v2: verified
+  // through hardhat-verify's Blockscout verifier instead.
+  blockscout: {
+    enabled: true,
+    customChains: [
       {
         network: 'citrea',
         chainId: 4114,
