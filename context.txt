@@ -123,6 +123,19 @@ Safe queue links (proposed 2026-09-30 by delegate 0xcC2447B495cBc8c2263619Ff3dc4
 
 Execution order: zkSync nonce 37 BEFORE Ethereum nonce 346 (enforced lzReceive gas must be raised before the mainnet _credit gains the limiter hook; otherwise zkSync->ETH deliveries stall at 65k gas). All others independent.
 
+Post-upgrade config, proposed 2026-10-01 (0/3 signed), queued right behind each upgrade so nonce order enforces "upgrade first":
+  Ethereum  nonce 347 rate-limits  0xe4a7b195c4b76c3fc9e36767e858d3eb1611bff7e75554706dc29c68cef957c1
+                                   (USN 10 cfgs + sUSN 20 cfgs, 4M/8h in+out; TAC+Sophon 1 wei + remote token 0x…dEaD x4)
+            nonce 348 dvn-config   0x67b3f3af5c0178fe392d822aa61138501935c73b470c805f3ef919e2ac38f124
+                                   (endpoint.setConfig USN send+receive ULN eid 30165 = sUSN's 3 required DVNs)
+  zkSync    nonce 38  rate-limits  0x6eb1e08c044a6d67fffd258a6ec4622114d68757fe3c76f10460a09526b4880d
+            nonce 39  dvn-config   0x5246d296c87e60285461ff524195d81062c6b7daf25356905fd4f8dd37c20bec  (eid 30101)
+  Base      nonce 6   rate-limits  0x6e9f5d7762ee25db64e36a4383ff60ebb512271321e573c1e70cdbe425cfca20
+  Bera      nonce 5   rate-limits  0x277dd9b0853fc7c687b70effac9c3c4381c93d098bfd2b7d247b1554622ffd0b
+  HyperEVM  import scripts/out/safe/hyperevm-rate-limits.json after hyperevm-2-execute.json (no service)
+  Citrea    scripts/out/safe/citrea-rate-limits.json via safe-raw-tx.ts after citrea-2-execute.json
+  Sophon    scripts/out/safe/sophon-zero-peers.json via safe-raw-tx.ts (independent of the upgrade)
+
 Post-execution checks per proxy: rateLimiter() == limiter, paused() == false, totalSupply unchanged,
 handle() from an unregistered origin reverts InvalidRemoteToken. Re-running
 `npx hardhat run scripts/propose-upgrade.ts` prints "already on <impl>" per chain.
