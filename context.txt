@@ -1,7 +1,62 @@
 NOON PROTOCOL — AUDITED BRIDGE-RATE-LIMITER UPGRADE — CONTEXT
-State as of 2026-09-30. Companion files: addresses.md (all addresses),
+State as of 2026-10-01. Companion files: addresses.md (all addresses),
 scripts/deploy-audited-implementations.md (runbook), scripts/out/audited-implementations.json
 (per-run record), scripts/out/safe/*.json (Safe batches).
+
+=====================================================================
+0. NEXT STEPS — ORDERED CHECKLIST (everything below is proposed/ready; nothing here is executed yet)
+=====================================================================
+Signing order matters only where marked. Each Safe queue executes in nonce order, so on Ethereum and
+zkSync the config txs cannot run before the upgrade tx.
+
+ STEP 1 — BEFORE Ethereum nonce 346 (both raise the lzReceive gas toward mainnet; without them
+          zkSync->ETH and Sui->ETH deliveries stall at 65k after the ETH sUSN/USN upgrade):
+   [ ] 1a  zkSync Safe 0x15d9…a263  nonce 37  upgrade batch incl. setEnforcedOptions(30101, SEND, 120k) x2   0/3 signed
+           https://app.safe.global/transactions/queue?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263
+   [ ] 1b  Sui admin key 0x67cd…906d  oapp::set_enforced_options(OApp, AdminCap, 30101, 1, lzReceive 120k)   (section 6, exact command)
+           verify: get_enforced_options(0xe8a26b0b…029f, 30101, 1) returns 0x0003…01d4c0
+
+ STEP 2 — the upgrades (independent of each other, any order):
+   [ ] 2a  Ethereum nonce 346   executeUpgrade USN + sUSN + setRateLimiter x2          0/3   (after 1a AND 1b)
+   [ ] 2b  Base     nonce 5     executeUpgrade sUSN + setRateLimiter                   0/3
+   [ ] 2c  Bera     nonce 4     executeUpgrade sUSN + setRateLimiter                   0/3
+   [ ] 2d  HyperEVM nonce 4     executeUpgrade sUSN + setRateLimiter                   1/3   https://app.safe.global/transactions/queue?safe=hyper-evm:0x3D6B…C5b8
+   [ ] 2e  Citrea   nonce 4     executeUpgrade sUSN + setRateLimiter                   1/3   https://safe.citrea.xyz/transactions/queue?safe=citrea-mainnet:0xB2aD…Fc80
+       (zkSync's upgrade is 1a itself.)
+       After each: rateLimiter() == limiter, paused() == false, totalSupply unchanged; `npx hardhat run scripts/propose-upgrade.ts`
+       prints "already on <impl>". Then send a tiny test transfer per route (scripts/lz/test-send-*.ts, Hyperlane via the UI).
+
+ STEP 3 — post-upgrade config (queued directly behind each upgrade, same signers):
+   [ ] 3a  Ethereum nonce 347  rate limits 4M/8h all routes + TAC/Sophon closed (1 wei + 0x…dEaD)   0/3
+   [ ] 3b  zkSync   nonce 38   same                                                              0/3
+   [ ] 3c  Base nonce 6 · Bera nonce 5 · HyperEVM nonce 5 · Citrea nonce 5  rate limits            0/3 · 0/3 · 1/3 · 1/3
+   [ ] 3d  Ethereum nonce 348  USN DVN config = sUSN (3 required) for eid 30165                     0/3
+   [ ] 3e  zkSync   nonce 39   USN DVN config = sUSN (3 required) for eid 30101                     0/3
+       3d + 3e revive the USN ETH<->zkSync LayerZero leg (currently dead: LZ Labs no longer signs as sole DVN).
+       Verify: `npx hardhat run scripts/propose-rate-limits.ts` and `scripts/propose-dvn-config.ts` print "already at target" / "already identical".
+
+ STEP 4 — deprecated chains (independent of the upgrade, can be done any time):
+   [ ] 4a  Sophon Safe 0x553d…88e0 (3-of-4, no service): scripts/out/safe/sophon-zero-peers.json via scripts/safe-raw-tx.ts
+           (MODE=hash, 3x MODE=sign, MODE=exec) — setPeer(30101,0) + setPeer(30165,0) on Sophon USN and sUSN
+   [x] 4b  Flare peers zeroed 2026-10-01 (txs in section 5)
+   [ ] 4c  TAC: nothing to sign — its Hyperlane routes die when 3a/3b register 0x…dEaD on ETH/zkSync/Base/HyperEVM
+
+ STEP 5 — decisions / DD follow-ups:
+   [ ] 5a  Sui rate limit: Sui side is 1M/8h both ways, ETH side will be 4M/8h -> effective 1M/8h. Raise Sui to 4M
+           (oft::set_rate_limit, section 6) or lower the ETH 30378 buckets to 1M. Decide and execute.
+   [ ] 5b  Sui admin is a single ed25519 key holding AdminCap + MigrationCap + UpgradeCap -> move to a Sui multisig.
+   [ ] 5c  zkSync: deploy Timelock(zkSync Safe, 48h) with zksolc 1.5.15, transferOwnership(timelock) on both ProxyAdmins (after 1a).
+   [ ] 5d  Ethereum enforced options toward zkSync (30165) and Sui (30378) are empty: front-end keeps passing extraOptions
+           (>=120k toward zkSync, 500k toward Sui). Optional: setEnforcedOptions on ETH USN/sUSN for both eids.
+   [ ] 5e  Front-end: vault wrappers depositWithPermit / *WithSlippageCheck are removed (0 on-chain calls ever).
+   [ ] 5f  Docs / DD material: Sophon + TAC closed, Flare none, Starknet + sUSN chains + limiter addresses (addresses.md),
+           USN ETH<->zkSync LZ leg back to 3 DVNs, Sui section. Send Hashlock statuses (section 1).
+   [ ] 5g  Repo: `git push origin bridge-rate-limiter-v1` (25 commits ahead, push only after review), `npm ci` to undo the
+           --no-save verify-plugin install, and update addresses.md with execution tx hashes as steps 1-4 land.
+
+ How to sign: Ethereum/Base/Bera/zkSync/HyperEVM in app.safe.global (queue links above and in section 4), Citrea in
+ safe.citrea.xyz, Sophon by raw signature only (safe-raw-tx.ts). All proposals were cross-checked byte-for-byte
+ against scripts/out/safe/<chain>-*.json and simulated from each Safe before proposing.
 
 =====================================================================
 1. GITHUB
@@ -22,8 +77,8 @@ Hashlock statuses to send:
   [L-01] Resolved. PR #14   [L-02] Resolved. PR #15   [L-03] Ack.
   [L-04] Resolved. PR #16   [Q-01] Ack.
 
-Local branch bridge-rate-limiter-v1 is 19 commits ahead of origin (scripts,
-runbook, addresses.md, config pins) — push when reviewed.
+Local branch bridge-rate-limiter-v1 is 25 commits ahead of origin (scripts,
+runbook, addresses.md, context.txt, config pins) — push when reviewed.
 
 =====================================================================
 2. PROXY UPGRADES — WHAT EACH PROXY MOVES TO
@@ -147,7 +202,7 @@ handle() from an unregistered origin reverts InvalidRemoteToken. Re-running
 `npx hardhat run scripts/propose-upgrade.ts` prints "already on <impl>" per chain.
 
 =====================================================================
-5. NEXT STEPS (after the upgrades execute)
+5. POST-UPGRADE CONFIG — DETAIL (the ordered checklist is section 0)
 =====================================================================
 Decided: 4,000,000 tokens per route per 8h sliding window (28800s), inbound and outbound, on
 every live route; TAC 239 + Sophon 50104 = 1 wei (closed) + Hyperlane remote token set to 0x…dEaD.
