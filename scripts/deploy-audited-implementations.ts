@@ -288,8 +288,12 @@ async function checkDeployed(p: ethers.Provider, plan: Plan, from: string) {
   const impl = plan.newImpl!;
   const code = await p.getCode(impl);
   const size = (code.length - 2) / 2;
-  if (size === 0 || size > EIP170)
-    throw new Error(`${impl}: deployed size ${size} bytes`);
+  // EVM: EIP-170 (24 576 bytes). zkSync EraVM bytecode is ~3x larger by
+  // design; its limit is 2^16 words of 32 bytes (must also be an odd number
+  // of words, which the compiler guarantees).
+  const limit = plan.chain === 'zksync' ? 65535 * 32 : EIP170;
+  if (size === 0 || size > limit)
+    throw new Error(`${impl}: deployed size ${size} bytes (limit ${limit})`);
   // Locked at deploy: initialize() on the bare implementation must revert InvalidInitialization.
   const data =
     plan.contract === 'StakingVaultOFTUpgradeableHyperlane'
@@ -649,6 +653,13 @@ async function runZksync(pk: string) {
   if (limiter) {
     limiter = ethers.getAddress(limiter);
     console.log(`  BridgeRateLimiter (existing) ${limiter}`);
+    await verifyOnExplorer(
+      'zksync',
+      'contracts/BridgeRateLimiter.sol',
+      'BridgeRateLimiter',
+      limiter,
+      [limiterOwner]
+    );
   } else if (DEPLOY_LIMITER) {
     const c = await deployer.deploy(
       await deployer.loadArtifact('BridgeRateLimiter'),
@@ -665,6 +676,21 @@ async function runZksync(pk: string) {
     );
   }
   for (const plan of chainPlans) {
+    const existing = process.env[`IMPL_ZKSYNC_${plan.token.toUpperCase()}`];
+    if (existing) {
+      plan.newImpl = ethers.getAddress(existing);
+      plan.limiter = limiter;
+      console.log(`  ${plan.contract} (existing) ${plan.newImpl}`);
+      await checkDeployed(p, plan, await wallet.getAddress());
+      await verifyOnExplorer(
+        'zksync',
+        plan.source,
+        plan.contract,
+        plan.newImpl,
+        plan.ctorArgs
+      );
+      continue;
+    }
     const c = await deployer.deploy(
       await deployer.loadArtifact(plan.contract),
       plan.ctorArgs
