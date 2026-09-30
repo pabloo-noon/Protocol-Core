@@ -23,7 +23,7 @@ zkSync the config txs cannot run before the upgrade tx.
    [ ] 2d  HyperEVM nonce 4     executeUpgrade sUSN + setRateLimiter                   1/3   https://app.safe.global/transactions/queue?safe=hyper-evm:0x3D6B…C5b8
    [ ] 2e  Citrea   nonce 4     executeUpgrade sUSN + setRateLimiter                   1/3   https://safe.citrea.xyz/transactions/queue?safe=citrea-mainnet:0xB2aD…Fc80
        (zkSync's upgrade is 1a itself.)
-       After each: rateLimiter() == limiter, paused() == false, totalSupply unchanged; `npx hardhat run scripts/propose-upgrade.ts`
+       After each: rateLimiter() == limiter, paused() == false (zkSync USN has no pause), totalSupply unchanged; `npx hardhat run scripts/propose-upgrade.ts`
        prints "already on <impl>". Then send a tiny test transfer per route (scripts/lz/test-send-*.ts, Hyperlane via the UI).
 
  STEP 3 — post-upgrade config (queued directly behind each upgrade, same signers):
@@ -45,6 +45,11 @@ zkSync the config txs cannot run before the upgrade tx.
    [ ] 5a  Sui rate limit: Sui side is 1M/8h both ways, ETH side will be 4M/8h -> effective 1M/8h. Raise Sui to 4M
            (oft::set_rate_limit, section 6) or lower the ETH 30378 buckets to 1M. Decide and execute.
    [ ] 5b  Sui admin is a single ed25519 key holding AdminCap + MigrationCap + UpgradeCap -> move to a Sui multisig.
+   [ ] 5b' Bera + Citrea sUSN (StakedUSNHyperlane 0xdA67…c1eD): DEFAULT_ADMIN_ROLE and BLACKLIST_MANAGER_ROLE are held by the
+           deployer EOA 0x1738…D699 only; the chain Safes hold NO role, so they can neither pause (pause() is onlyRole(DEFAULT_ADMIN_ROLE),
+           there is no separate PAUSER_ROLE) nor blacklist. Base and HyperEVM are correct (Safe holds both, deployer none).
+           Fix (deployer EOA, 2 tx per chain, then renounce): grantRole(DEFAULT_ADMIN_ROLE, Safe) + grantRole(BLACKLIST_MANAGER_ROLE, Safe),
+           confirm hasRole from the Safe, then renounceRole(both, deployer). Independent of the upgrade (roles live in proxy storage).
    [ ] 5c  zkSync: deploy Timelock(zkSync Safe, 48h) with zksolc 1.5.15, transferOwnership(timelock) on both ProxyAdmins (after 1a).
    [ ] 5d  Ethereum enforced options toward zkSync (30165) and Sui (30378) are empty: front-end keeps passing extraOptions
            (>=120k toward zkSync, 500k toward Sui). Optional: setEnforcedOptions on ETH USN/sUSN for both eids.
@@ -90,7 +95,7 @@ Base      sUSN   0x34a2798D47b238A7CbA9D87D49618DEE6C4D999F  0xdA67B4284609d2d48
 HyperEVM  sUSN   0x34a2798D47b238A7CbA9D87D49618DEE6C4D999F  0xdA67B4284609d2d48e5d10cfAc411572727dc1eD -> 0xffC95e7E447DC94DcE706B8afda751349E676227  StakedUSNHyperlane (gains pause)
 Citrea    sUSN   0xdA67B4284609d2d48e5d10cfAc411572727dc1eD  0x0aDa1cb43aC67FFfA2773B169920bfAB4c6391B7 -> 0x6D1019bdbe1Da163134Aba821bBfc1cCAEb988a8  StakedUSNHyperlane
 Bera      sUSN   0xdA67B4284609d2d48e5d10cfAc411572727dc1eD  0x0aDa1cb43aC67FFfA2773B169920bfAB4c6391B7 -> 0x657284c8337ab91b1a7d4eb66Be97596f4878117  StakedUSNHyperlane
-zkSync    USN    0x0469d9d1dE0ee58fA1153ef00836B9BbCb84c0B6  0xa5b228237bEf9bC804D8d6E7c76d0853a406bf34 -> 0xb00B492099323E386dFD1E014850Ca16396E8C22  USNOFTHyperlane (gains pause)
+zkSync    USN    0x0469d9d1dE0ee58fA1153ef00836B9BbCb84c0B6  0xa5b228237bEf9bC804D8d6E7c76d0853a406bf34 -> 0xb00B492099323E386dFD1E014850Ca16396E8C22  USNOFTHyperlane (NO pause: not Pausable, before or after; only the rate limiter can stop it, limit=1 wei)
 zkSync    sUSN   0xB6a09d426861c63722Aa0b333a9cE5d5a9B04c4f  0x9F80bbe82dBad5D74904c83bD8990c8Ba9dfe82a -> 0x8B9E886B6850615911c61a7cd10c9C6630d1A03d  StakedUSNOFTHyperlane (gains pause)
 
 BridgeRateLimiter per chain (owner = chain Safe):
@@ -197,7 +202,9 @@ Post-upgrade config, proposed 2026-10-01 (0/3 signed), queued right behind each 
   Citrea    nonce 5   rate-limits  0x857c682bc5c24706b7a390ead488a7d9a31500b098d091b7c4d10e76cce17e82  (1/3, from the UI, matches citrea-rate-limits.json)
   Sophon    scripts/out/safe/sophon-zero-peers.json via safe-raw-tx.ts (independent of the upgrade)
 
-Post-execution checks per proxy: rateLimiter() == limiter, paused() == false, totalSupply unchanged,
+Post-execution checks per proxy: rateLimiter() == limiter, paused() == false (except zkSync USN: USNOFTHyperlane has no pause), totalSupply unchanged,
+Pause state survives the upgrade: every executeUpgrade / upgradeAndCall carries data=0x (no initializer, verified in all 6 batches), and
+paused() is false today on ETH USN/sUSN, Base/Bera/Citrea sUSN and zkSync sUSN; HyperEVM sUSN's current impl has no paused() (gains it, starts false).
 handle() from an unregistered origin reverts InvalidRemoteToken. Re-running
 `npx hardhat run scripts/propose-upgrade.ts` prints "already on <impl>" per chain.
 
