@@ -29,6 +29,11 @@ const config: HardhatUserConfig = {
     compilers: [
       {
         version: process.env.SOLC_VERSION || '0.8.28',
+        // era-solidity fork used by zksolc for zkSync/Sophon builds. Must be
+        // set per compiler entry (the top-level eraVersion is ignored when a
+        // compilers array is present); 1.0.1 is what the live zkSync
+        // implementations were built with and what the local cache holds.
+        eraVersion: '1.0.1',
         settings: {
           optimizer: {
             enabled: true,
