@@ -56,7 +56,7 @@ Deployer for every implementation/limiter: `0x173806021b18c4E60170e412DC88F991eB
 | **sUSN new impl** (StakedUSNHyperlane; adds pause) | [`0xffC95e7E447DC94DcE706B8afda751349E676227`](https://hyperevmscan.io/address/0xffC95e7E447DC94DcE706B8afda751349E676227#code) |
 | sUSN old impl (pre-Pausable build)                 | `0xdA67B4284609d2d48e5d10cfAc411572727dc1eD`                                                                                    |
 
-- Phase 1 scheduled via Transaction Builder JSON (no Safe service on HyperEVM), executable from **2026-09-29 16:18 UTC**. Op id `0xf5ffefdfacd163d8b41dfe70e2c6f81c8838a5f65c1fa5412f762f02e44fbc48`.
+- Phase 1 scheduled via Transaction Builder JSON on app.safe.global (chain `hyper-evm`, service slug `hyper`), executable from **2026-09-29 16:18 UTC**. Op id `0xf5ffefdfacd163d8b41dfe70e2c6f81c8838a5f65c1fa5412f762f02e44fbc48`.
 
 ## Citrea (chainId 4114)
 
@@ -70,7 +70,7 @@ Deployer for every implementation/limiter: `0x173806021b18c4E60170e412DC88F991eB
 | **sUSN new impl** (StakedUSNHyperlane) | [`0x6D1019bdbe1Da163134Aba821bBfc1cCAEb988a8`](https://explorer.mainnet.citrea.xyz/address/0x6D1019bdbe1Da163134Aba821bBfc1cCAEb988a8#code) |
 | sUSN old impl                          | `0x0aDa1cb43aC67FFfA2773B169920bfAB4c6391B7`                                                                                                |
 
-- Phase 1 scheduled via JSON (no Safe service / UI on Citrea), executable from **2026-09-30 16:16 UTC**. Op id `0x0b12851d73d331a8d4d648fdb403217473d1a2d2587d1a82a415b26f503240ef`.
+- Phase 1 scheduled via JSON on https://safe.citrea.xyz (chain `citrea-mainnet`, service https://transaction.safe.citrea.xyz), executable from **2026-09-30 16:16 UTC**. Op id `0x0b12851d73d331a8d4d648fdb403217473d1a2d2587d1a82a415b26f503240ef`.
 
 ## Bera (chainId 80094)
 

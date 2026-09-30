@@ -77,19 +77,30 @@ const HL_DOMAINS: Record<number, string> = {
   50104: 'Sophon',
   358974494: 'Starknet',
 };
+// Safe Transaction Service per chain: a safe.global gateway slug, or a full
+// base URL for a self-hosted service (null = no service: JSON only).
 const SAFE_SERVICE: Record<string, string | null> = {
   ethereum: 'eth',
   base: 'base',
-  hyperevm: null,
-  citrea: null,
+  hyperevm: 'hyper', // app.safe.global "hyper-evm"
+  citrea: 'https://transaction.safe.citrea.xyz', // safe.citrea.xyz, no API key
   bera: 'berachain',
   zksync: 'zksync',
 };
 const SAFE_UI: Record<string, string> = {
-  ethereum: 'eth',
-  base: 'base',
-  bera: 'berachain',
-  zksync: 'zksync',
+  ethereum: 'https://app.safe.global/transactions/queue?safe=eth:',
+  base: 'https://app.safe.global/transactions/queue?safe=base:',
+  hyperevm: 'https://app.safe.global/transactions/queue?safe=hyper-evm:',
+  citrea: 'https://safe.citrea.xyz/transactions/queue?safe=citrea-mainnet:',
+  bera: 'https://app.safe.global/transactions/queue?safe=berachain:',
+  zksync: 'https://app.safe.global/transactions/queue?safe=zksync:',
+};
+const serviceBase = (chain: string): string | null => {
+  const s = SAFE_SERVICE[chain];
+  if (!s) return null;
+  return s.startsWith('http')
+    ? `${s}/api`
+    : `https://api.safe.global/tx-service/${s}/api`;
 };
 const MULTISEND: Record<string, string> = {
   default: '0x9641d764fc13c8B624c04430C7356C1C7C8102e2',
@@ -311,19 +322,19 @@ async function safeApi(
   path: string,
   init?: RequestInit
 ): Promise<any> {
+  const base = serviceBase(chain);
+  if (!base) throw new Error('no Safe service on this chain');
   const slug = SAFE_SERVICE[chain];
-  if (!slug) throw new Error('no Safe service on this chain');
-  const res = await fetch(
-    `https://api.safe.global/tx-service/${slug}/api${path}`,
-    {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${SAFE_API_KEY}`,
-        'content-type': 'application/json',
-        ...(init?.headers ?? {}),
-      },
-    }
-  );
+  const res = await fetch(`${base}${path}`, {
+    ...init,
+    headers: {
+      ...(base.includes('api.safe.global')
+        ? { Authorization: `Bearer ${SAFE_API_KEY}` }
+        : {}),
+      'content-type': 'application/json',
+      ...(init?.headers ?? {}),
+    },
+  });
   const text = await res.text();
   let body: any = text;
   try {
@@ -343,10 +354,10 @@ async function propose(
   txs: Tx[],
   label: string
 ) {
-  if (!SAFE_API_KEY || !SAFE_PROPOSER_PK)
-    throw new Error(
-      'PROPOSE=true needs SAFE_API_KEY and SAFE_PROPOSER_PRIVATE_KEY'
-    );
+  if (!SAFE_PROPOSER_PK)
+    throw new Error('PROPOSE=true needs SAFE_PROPOSER_PRIVATE_KEY');
+  if (serviceBase(chain.name)?.includes('api.safe.global') && !SAFE_API_KEY)
+    throw new Error('needs SAFE_API_KEY for the safe.global gateway');
   const signer = new ethers.Wallet(SAFE_PROPOSER_PK, p);
   const safeC = new ethers.Contract(safe, SAFE_ABI, p);
   const owners: string[] = await safeC.getOwners();
@@ -457,7 +468,7 @@ async function propose(
     }),
   });
   console.log(
-    `  ✓ proposed ${label} as nonce ${nonce} (${isOwner ? '1' : '0'}/${info.threshold})\n    ${safeTxHash}\n    https://app.safe.global/transactions/queue?safe=${SAFE_UI[chain.name]}:${safe}`
+    `  ✓ proposed ${label} as nonce ${nonce} (${isOwner ? '1' : '0'}/${info.threshold})\n    ${safeTxHash}\n    ${SAFE_UI[chain.name]}${safe}`
   );
 }
 

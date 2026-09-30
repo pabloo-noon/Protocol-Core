@@ -97,8 +97,8 @@ Phase 1 — Timelock.scheduleUpgrade (Safe txs, executed 2026-09-28):
   Ethereum  Safe nonce 345  https://etherscan.io/tx/0x378af8384b0367504dfdaaea7721f8afa49c95da89e1c67e672af0a951f85761   (USN + sUSN, MultiSend)
   Base      Safe nonce 4    https://basescan.org/tx/0xb67b03e82872cde2451adacaaeb2cdbad98449a5e0ec2c095e4afd24d9f59061
   Bera      Safe nonce 3    https://berascan.com/tx/0xff93eb8022ad825defe3b49dfe54628979f7ce5c27934be3228ddc505b3d16a8
-  HyperEVM  via Transaction Builder JSON (no Safe service)
-  Citrea    via Transaction Builder JSON (no Safe service)
+  HyperEVM  via Transaction Builder JSON (app.safe.global, chain "hyper-evm")
+  Citrea    via Transaction Builder JSON (safe.citrea.xyz, chain "citrea-mainnet")
   Timelock op ids: ETH USN 0x06cde24532e50f057d3d109c89f2cbb793aba243268c8f446fef37a06b4ed941, ETH sUSN 0x23d31f502eac6ffcbf206d15b5261842b93951dda9154755dcd9ec76b01019d3,
                    Base 0x75ef29445d8fda620cd745079106f162bc6b1777362dd8b78761355493cef052, HyperEVM 0xf5ffefdfacd163d8b41dfe70e2c6f81c8838a5f65c1fa5412f762f02e44fbc48,
                    Citrea 0x0b12851d73d331a8d4d648fdb403217473d1a2d2587d1a82a415b26f503240ef, Bera 0xbc15adbc1673522a3a1abdc617f2286cc91504834870e72ba0042e157054e13d
@@ -118,8 +118,13 @@ Safe queue links (proposed 2026-09-30 by delegate 0xcC2447B495cBc8c2263619Ff3dc4
             https://app.safe.global/transactions/queue?safe=base:0xf56d33ef52642ce226A566610A979DC8d954592D
   Bera      nonce 4   safeTxHash 0xfc4da63324b00f9931e440bfc288fc68820e3e20a1d58ad7e804c7cdd58a571f
             https://app.safe.global/transactions/queue?safe=berachain:0x94E9f383b085D32973634EA7c9bB2038eF9a3C58
-  HyperEVM  Safe 0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8 — import scripts/out/safe/hyperevm-2-execute.json in Transaction Builder (no service)
-  Citrea    Safe 0xB2aD758Ee2710527A28d906F9588938c2e5cFc80 — scripts/out/safe/citrea-2-execute.json via scripts/safe-raw-tx.ts (hash / sign x3 / exec; no Safe UI)
+  HyperEVM  nonce 4   safeTxHash 0x84e38af23fb035ea08d55795cb09a9998ea9259af1671cd2c19b319f668c7d9d  (1/3, proposed from the UI 2026-10-01)
+            https://app.safe.global/transactions/queue?safe=hyper-evm:0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8
+            service: https://api.safe.global/tx-service/hyper (gateway slug "hyper", needs SAFE_API_KEY)
+  Citrea    nonce 4   safeTxHash 0x152a0bf41ddf58fa2e14704f822672e6477d5a4b2ed4b5957e8b1ed085db7724  (1/3, proposed from the UI 2026-10-01)
+            https://safe.citrea.xyz/transactions/queue?safe=citrea-mainnet:0xB2aD758Ee2710527A28d906F9588938c2e5cFc80
+            service: https://transaction.safe.citrea.xyz (Citrea-hosted, no API key; config https://config.safe.citrea.xyz)
+  Both verified byte-for-byte against scripts/out/safe/{hyperevm,citrea}-2-execute.json (MultiSendCallOnly 1.4.1 on both chains).
 
 Execution order: zkSync nonce 37 BEFORE Ethereum nonce 346 (enforced lzReceive gas must be raised before the mainnet _credit gains the limiter hook; otherwise zkSync->ETH deliveries stall at 65k gas). All others independent.
 
@@ -132,8 +137,8 @@ Post-upgrade config, proposed 2026-10-01 (0/3 signed), queued right behind each 
             nonce 39  dvn-config   0x5246d296c87e60285461ff524195d81062c6b7daf25356905fd4f8dd37c20bec  (eid 30101)
   Base      nonce 6   rate-limits  0x6e9f5d7762ee25db64e36a4383ff60ebb512271321e573c1e70cdbe425cfca20
   Bera      nonce 5   rate-limits  0x277dd9b0853fc7c687b70effac9c3c4381c93d098bfd2b7d247b1554622ffd0b
-  HyperEVM  import scripts/out/safe/hyperevm-rate-limits.json after hyperevm-2-execute.json (no service)
-  Citrea    scripts/out/safe/citrea-rate-limits.json via safe-raw-tx.ts after citrea-2-execute.json
+  HyperEVM  nonce 5   rate-limits  0x8e308ebc326fdb7701d6accc08715d4542f192439041e6b5e21634ab0c147767  (1/3, from the UI, matches hyperevm-rate-limits.json)
+  Citrea    nonce 5   rate-limits  0x857c682bc5c24706b7a390ead488a7d9a31500b098d091b7c4d10e76cce17e82  (1/3, from the UI, matches citrea-rate-limits.json)
   Sophon    scripts/out/safe/sophon-zero-peers.json via safe-raw-tx.ts (independent of the upgrade)
 
 Post-execution checks per proxy: rateLimiter() == limiter, paused() == false, totalSupply unchanged,
@@ -159,7 +164,9 @@ SAFE_API_KEY IP allowlist, or import the JSON files in the Safe UI Transaction B
        no service: MODE=hash/sign/exec with scripts/safe-raw-tx.ts). Flare DONE (deployer EOA):
        sUSN 0xF98A…8A41 setPeer(30101,0) tx 0xbb73382601d012d4c70e921b638dd55f64c1dff62f445d479050b9f6107828fa
        USN  0x6086…C2Bd setPeer(30101,0) tx 0x2e2f7c924487f40342e1e109792381ba4e58c71b6e9d5a76107127dccc863522
-   HyperEVM / Citrea have no Safe service either: import the JSON in the Safe UI, or safe-raw-tx.ts on Citrea.
+   HyperEVM: app.safe.global chain "hyper-evm" (service slug "hyper"). Citrea: safe.citrea.xyz chain "citrea-mainnet"
+   (service https://transaction.safe.citrea.xyz). Both wired into scripts/lib/safe-propose.ts, so PROPOSE=true now
+   covers them too; Sophon remains JSON + safe-raw-tx.ts only.
 1. setRateLimits on every limiter (all buckets start at limit 0 = unlimited). Routes:
      Ethereum: USN <-> zkSync (LZ 30165, HL 324); sUSN <-> zkSync (LZ 30165, HL 324), Sui (LZ 30378),
                Base 8453 / HyperEVM 999 / Citrea 4114 / Bera 80094 / Starknet 358974494 (HL), in and out.
