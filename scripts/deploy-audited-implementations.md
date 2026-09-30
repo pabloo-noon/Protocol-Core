@@ -71,11 +71,22 @@ batches to `scripts/out/safe/<chain>-1-schedule.json` / `<chain>-2-execute.json`
    `InvalidInitialization`, `endpoint()` equals the proxy's. Addresses and
    tx hashes are appended to `scripts/out/audited-implementations.json`.
 
-4. **zkSync** separately (needs zksolc artifacts):
+4. **zkSync** separately (zksolc artifacts). The explorer's verification
+   service only accepts zksolc v1.5.15+, so build with that version, and
+   skip the in-script verification (the hardhat-zksync-verify plugin sends a
+   request shape the service rejects):
 
    ```
-   BROADCAST=true npx hardhat run scripts/deploy-audited-implementations.ts --network zksync
+   ZKSOLC_VERSION=1.5.15 npx hardhat compile --network zksync
+   ZKSOLC_VERSION=1.5.15 VERIFY=false BROADCAST=true npx hardhat run --no-compile scripts/deploy-audited-implementations.ts --network zksync
    ```
+
+   Then verify by POSTing the standard-JSON input from
+   `artifacts-zk/build-info` to
+   `https://zksync2-mainnet-explorer.zksync.io/contract_verification` with
+   `sourceCode` as an object, `compilerSolcVersion: "zkVM-0.8.28-1.0.1"`,
+   `compilerZksolcVersion: "v1.5.15"` (see the session notes in
+   `scripts/out/audited-implementations.json` for the addresses).
 
 5. **Verify** on each explorer with the commands the script prints
    (`npx hardhat verify --contract <source>:<name> <impl> [<endpoint>]`).

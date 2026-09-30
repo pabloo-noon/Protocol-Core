@@ -339,7 +339,10 @@ const config: HardhatUserConfig = {
     enabled: true,
   },*/
   zksolc: {
-    version: '1.5.7',
+    // The zkSync explorer's verification service only accepts recent zksolc
+    // versions (v1.5.15+ as of 2026-09); override for deploys that need to
+    // be verifiable: ZKSOLC_VERSION=1.5.17.
+    version: process.env.ZKSOLC_VERSION || '1.5.7',
     compilerSource: 'binary',
     settings: {
       libraries: {},
