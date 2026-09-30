@@ -127,6 +127,7 @@ Safe queue links (proposed 2026-09-30 by delegate 0xcC2447B495cBc8c2263619Ff3dc4
   Both verified byte-for-byte against scripts/out/safe/{hyperevm,citrea}-2-execute.json (MultiSendCallOnly 1.4.1 on both chains).
 
 Execution order: zkSync nonce 37 BEFORE Ethereum nonce 346 (enforced lzReceive gas must be raised before the mainnet _credit gains the limiter hook; otherwise zkSync->ETH deliveries stall at 65k gas). All others independent.
+SAME BLOCKER ON SUI: Sui->ETH sUSN messages are sent with lzReceive gas 65,000 (sender-supplied, Sui OApp enforces nothing) -> set_enforced_options on the Sui OApp (eid 30101, msg type 1, >= 120k) BEFORE Ethereum nonce 346. See section 6.
 
 Post-upgrade config, proposed 2026-10-01 (0/3 signed), queued right behind each upgrade so nonce order enforces "upgrade first":
   Ethereum  nonce 347 rate-limits  0xe4a7b195c4b76c3fc9e36767e858d3eb1611bff7e75554706dc29c68cef957c1
@@ -186,3 +187,62 @@ SAFE_API_KEY IP allowlist, or import the JSON files in the Safe UI Transaction B
 6. Repo: push bridge-rate-limiter-v1 (21 commits), npm ci (undo --no-save verify-plugin install),
    update addresses.md with execution tx hashes. Docs: mark Sophon/TAC closed, Flare none,
    add Starknet + sUSN chains + limiter addresses. Send Hashlock statuses (section 1).
+
+=====================================================================
+6. SUI — sUSN ETH <-> Sui (LayerZero eid 30101 <-> 30378), state read 2026-10-01
+=====================================================================
+Sui objects (read via https://graphql.mainnet.sui.io/graphql; JSON-RPC on public fullnodes is retired):
+  OFT package (= the ETH-side peer bytes32)  0xa356ca2010fcdf44d6cecfcecf18b73c32188d361e39dff3a96ac8de0dec7b1b
+     modules: oft, oft_impl, rate_limiter, pausable, oft_fee, ... (LayerZero Sui OFT, upgrade_version 1)
+  OFT object (shared)   0xab496ed0068cba592901b15cf0192ad366c2634fae3a75eb9632cfa5bdaf567e   type oft::OFT<0x0a67…4dc5::susn::SUSN>
+  OApp object (shared)  0xe8a26b0ba4f665eb7f1bc1996ed9b93892bc9ed67013321b5b71de1f89b7029f   type 0xfdc2…6e24::oapp::OApp
+  AdminCap              0x429cd02c7835a791701a612924b6d6788235a05e5a83de3032ac2dddba8cd662   held by 0x67cddd47a21038c0bf126096615a06d4dc33bb2de1ea991fff8461875321906d
+  MigrationCap          0x5cf78f25c993c7072bbaff72f3981c7114bb221855d04c93d70ccff061e64d0f   held by the same address (also holds the UpgradeCap)
+  TreasuryCap (wrapped in the OFT)  0xbfcc5e88…78f968   total_supply 1,507,325.311767 sUSN (6 decimals, shared decimals 6)
+  paused = false, fee 0 bps, decimal_conversion_rate 1.
+  LZ Sui mainnet infra: endpointV2 0x31beaef8…36dac, send/receive ULN302 0x3ce7457b…5dbb0, executor 0xde7fe1a6…1989.
+
+  ADMIN IS A SINGLE ed25519 KEY, NOT A MULTISIG: every tx from 0x67cd…906d (5 in total) carries a flag-0x00 ed25519
+  signature (multisig would be flag 0x03). History: 2026-07-16 uln_302::set_config x2 (initial DVNs),
+  2026-08-24 oft::set_rate_limit x2, 2026-08-26 uln_302::set_config x2 (3-DVN upgrade, same day as ETH Safe nonce 309).
+  DD item: move AdminCap + MigrationCap + UpgradeCap to a Sui multisig.
+
+Peers: Sui peer(30101) = ETH sUSN 0xE24a…B91D; ETH sUSN peer(30378) = the package above. USN has NO Sui peer (route does not exist).
+
+DVNs — PARITY OK, 3 required both directions (proven by delivered traffic, not just config):
+  ETH side (set 2026-08-26, Safe nonce 309, tx 0x3309a7ca…64e6): send + receive ULN for 30378 = 3 required
+     [Horizen 0x3802…F20D, Nansen 0x3a46…4E30, LayerZero Labs 0x589d…236b], 15 confirmations. Note: eth.txt/todo.txt
+     call 0x3a46… "Nethermind"; LZ metadata says Nansen.
+  Sui side: LZ Scan shows the last Sui->ETH message (2026-09-09, 150,000 sUSN, ETH tx 0x108181e6…b15c) verified by
+     those same 3 ETH DVNs, and the last ETH->Sui message (2026-09-24, 215,158 sUSN, tx 0xd2a14f20…3235) verified on Sui by
+     [LZ Labs 0x52aa1290…, Nansen 0x8c4e6f80…, Horizen 0x92128a5e…]. Both DELIVERED. todo.txt P3 "Sui-side 3-DVN upgrade" is DONE.
+
+Traffic (Etherscan, all time): 34 ETH->Sui sends (first 2026-07-03, last 2026-09-24), 10 Sui->ETH receives (last 2026-09-09).
+
+Enforced options: EMPTY ON BOTH SIDES.
+  ETH->Sui: senders pass lzReceive gas 500,000 (all recent sends carry 0x0003010011010000000000000000000000000007a120). Delivered fine.
+  Sui->ETH: senders pass lzReceive gas 65,000 (LZ Scan options on both 09-09 deliveries). Executor txs used 85.7k total
+     (≈ 64.7k inside lzReceive) on the CURRENT implementation. After Ethereum nonce 346 the sUSN _credit path costs
+     ≈ 74k (limit set, warm) to ≈ 91k (cold) -> every Sui->ETH delivery would OOG at 65k and sit "payload stored"
+     until someone re-executes with more gas. Same failure mode as zkSync, fixed there via nonce 37.
+  FIX (Sui admin key 0x67cd…906d, before ETH nonce 346 is executed):
+     package 0xfdc28afc0110cb2edb94e3e57f2b1ce69b5a99c503b06d15e51cfa212de56e24  module oapp
+     set_enforced_options(&mut OApp, &AdminCap, eid u32, msg_type u16, options vector<u8>)
+       OApp     0xe8a26b0ba4f665eb7f1bc1996ed9b93892bc9ed67013321b5b71de1f89b7029f
+       AdminCap 0x429cd02c7835a791701a612924b6d6788235a05e5a83de3032ac2dddba8cd662
+       eid 30101, msg_type 1 (SEND), options 0x00030100110100000000000000000000000000000001d4c0  (type-3, lzReceive 120,000 gas)
+     e.g. sui client call --package 0xfdc28afc0110cb2edb94e3e57f2b1ce69b5a99c503b06d15e51cfa212de56e24 --module oapp \
+            --function set_enforced_options --args 0xe8a26b0b…029f 0x429cd02c…d662 30101 1 0x0003010011010000…01d4c0 --gas-budget 20000000
+     Enforced options are merged with the sender's extraOptions (65k + 120k = 185k), so front-ends need no change.
+     Verify with get_enforced_options(OApp, 30101, 1) or by re-reading the enforced_options table 0x5c3415e9…5c7b.
+  Optional symmetric hardening: ETH sUSN setEnforcedOptions(30378, 1, lzReceive 500k) so ETH->Sui does not depend on the
+     front-end passing options (would double the Sui executor fee for senders that keep passing 500k).
+
+Sui-side rate limiter (LayerZero OFT built-in, set 2026-08-24 by the admin key, tx HnRbRmkssPYsE1PuEU2VuGb869vC487FDA3REDy4BNbS):
+  inbound  from eid 30101: limit 1,000,000 sUSN per 28,800 s (8h); in_flight 215,158.118 at 2026-09-24 14:23 UTC (the last ETH->Sui receive)
+  outbound to   eid 30101: limit 1,000,000 sUSN per 28,800 s (8h); in_flight 0
+  Ours (Ethereum sUSN limiter, nonce 347): LZ 30378 in + out = 4,000,000 per 8h. Effective ETH->Sui cap = min(4M ETH out, 1M Sui in) = 1M/8h;
+  Sui->ETH = min(1M Sui out, 4M ETH in) = 1M/8h. Decide: raise Sui to 4M (oft::set_rate_limit(OFT, AdminCap, eid, outbound bool, limit u64
+  in 6-dec units = 4000000000000, window 28800, &Clock 0x6)) or lower the ETH 30378 buckets to 1M (LIMIT_OVERRIDE in propose-rate-limits.ts).
+
+ETH <-> Starknet: Hyperlane domain 358974494, covered by the ETH batches (USN + sUSN, in + out, 4M/8h). Nothing to configure on LZ.

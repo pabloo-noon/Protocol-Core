@@ -117,6 +117,23 @@ Deployer for every implementation/limiter: `0x173806021b18c4E60170e412DC88F991eB
 Their Hyperlane routes are still registered on ETH/zkSync (to be pointed at
 `0x…dEaD`); Sophon still holds LayerZero peers to ETH/zkSync on its side.
 
+## Sui (LayerZero eid 30378, sUSN only — not upgradeable from this repo)
+
+| object | address |
+| --- | --- |
+| OFT package (ETH-side peer bytes32) | `0xa356ca2010fcdf44d6cecfcecf18b73c32188d361e39dff3a96ac8de0dec7b1b` |
+| OFT object (shared, `oft::OFT<…::susn::SUSN>`) | `0xab496ed0068cba592901b15cf0192ad366c2634fae3a75eb9632cfa5bdaf567e` |
+| OApp object (shared, peers / enforced options) | `0xe8a26b0ba4f665eb7f1bc1996ed9b93892bc9ed67013321b5b71de1f89b7029f` |
+| AdminCap | `0x429cd02c7835a791701a612924b6d6788235a05e5a83de3032ac2dddba8cd662` |
+| MigrationCap | `0x5cf78f25c993c7072bbaff72f3981c7114bb221855d04c93d70ccff061e64d0f` |
+| Admin (holds AdminCap + MigrationCap + UpgradeCap) | `0x67cddd47a21038c0bf126096615a06d4dc33bb2de1ea991fff8461875321906d` — **single ed25519 key, not a multisig** |
+| coin package | `0x0a672389b7b73df60d40666ac9545433d59d3128086b9e3a425a66bbffdf4dc5::susn::SUSN` (6 decimals) |
+| LZ oapp package / endpointV2 / ULN302 / executor | `0xfdc28afc…6e24` / `0x31beaef8…36dac` / `0x3ce7457b…5dbb0` / `0xde7fe1a6…1989` |
+
+- DVNs: 3 required both directions (LZ Labs, Nansen, Horizen) since 2026-08-26, proven by delivered messages on 09-09 and 09-24.
+- Built-in rate limiter: 1,000,000 sUSN per 8h inbound and outbound vs eid 30101 (set 2026-08-24). ETH side will be 4M/8h (nonce 347) → effective 1M/8h until aligned.
+- Enforced options empty on both sides. Sui→ETH senders pass **65 000** lzReceive gas → must set `oapp::set_enforced_options(OApp, AdminCap, 30101, 1, 0x0003…01d4c0)` (120k) **before Ethereum nonce 346**. Details in `context.txt` section 6.
+
 ## Implementations claimed on 2026-09-27 (initialize() to the chain Safe)
 
 Base `0xdA67…c1eD`, HyperEVM `0xdA67…c1eD`, Citrea `0x0aDa…91B7`, Bera `0x0aDa…91B7`,
