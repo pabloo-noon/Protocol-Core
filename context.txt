@@ -32,7 +32,16 @@ zkSync the config txs cannot run before the upgrade tx.
    [ ] 3c  Base nonce 6 · Bera nonce 5 · HyperEVM nonce 5 · Citrea nonce 5  rate limits            0/3 · 0/3 · 1/3 · 1/3
    [ ] 3d  Ethereum nonce 348  USN DVN config = sUSN (3 required) for eid 30165                     0/3
    [ ] 3e  zkSync   nonce 39   USN DVN config = sUSN (3 required) for eid 30101                     0/3
+   [ ] 3f  zkSync   nonce 40   EndpointV2.skip(USN, 30101, ETH USN, 139) + skip(…, 140)                    0/3
        3d + 3e revive the USN ETH<->zkSync LayerZero leg (currently dead: LZ Labs no longer signs as sole DVN).
+       3f is REQUIRED for the revival to work: the zkSync endpoint has that channel at inboundNonce 138 while Ethereum
+       sent 140; nonces 139/140 have no payload hash (never verified by the sole DVN) and can never verify once 3e changes
+       the receive ULN, and the endpoint will not execute nonce 141+ while they are missing. skip() is delegate-gated
+       (zkSync Safe). It does NOT refund the two Ethereum senders (debited on ETH, nothing minted on zkSync) — make whole separately:
+         nonce 139  2026-05-08  50,000.00 USN  from 0x95780F943b6361FB11eEd893cf1237Dd9B3F54AF  tx 0xc9bc092231d356bbc74ff2d3a35c406d11e2c032f9dd04b4c494f6b93ada3c76
+         nonce 140  2026-05-11       0.02 USN  from 0x8b937c5395D95a8c8948C7C5B844e1541798d90C  tx 0xc27bb7d54f95f822ae1bc960afec2dff72122d6d2a24bdec98bc8a8b89249209
+       sUSN ETH<->zkSync and USN zkSync->ETH are in sync (no gaps). Script: scripts/propose-skip-stuck-nonces.ts (idempotent; also
+       refuses to skip any nonce that carries a payload hash).
        Verify: `npx hardhat run scripts/propose-rate-limits.ts` and `scripts/propose-dvn-config.ts` print "already at target" / "already identical".
 
  STEP 4 — deprecated chains (independent of the upgrade, can be done any time):
@@ -45,11 +54,12 @@ zkSync the config txs cannot run before the upgrade tx.
    [ ] 5a  Sui rate limit: Sui side is 1M/8h both ways, ETH side will be 4M/8h -> effective 1M/8h. Raise Sui to 4M
            (oft::set_rate_limit, section 6) or lower the ETH 30378 buckets to 1M. Decide and execute.
    [ ] 5b  Sui admin is a single ed25519 key holding AdminCap + MigrationCap + UpgradeCap -> move to a Sui multisig.
-   [ ] 5b' Bera + Citrea sUSN (StakedUSNHyperlane 0xdA67…c1eD): DEFAULT_ADMIN_ROLE and BLACKLIST_MANAGER_ROLE are held by the
-           deployer EOA 0x1738…D699 only; the chain Safes hold NO role, so they can neither pause (pause() is onlyRole(DEFAULT_ADMIN_ROLE),
-           there is no separate PAUSER_ROLE) nor blacklist. Base and HyperEVM are correct (Safe holds both, deployer none).
-           Fix (deployer EOA, 2 tx per chain, then renounce): grantRole(DEFAULT_ADMIN_ROLE, Safe) + grantRole(BLACKLIST_MANAGER_ROLE, Safe),
-           confirm hasRole from the Safe, then renounceRole(both, deployer). Independent of the upgrade (roles live in proxy storage).
+   [ ] 5b' Base (0x34a2…999F) + Bera + Citrea (0xdA67…c1eD) sUSN receivers: DEFAULT_ADMIN_ROLE and BLACKLIST_MANAGER_ROLE were held
+           by the deployer EOA 0x1738…D699 only; the chain Safes held NO role, so they could neither pause (pause() is
+           onlyRole(DEFAULT_ADMIN_ROLE), there is no separate PAUSER_ROLE) nor blacklist. HyperEVM is correct (Safe holds both, deployer none).
+           scripts/transfer-roles-to-safe.ts: grantRole(both, Safe) from the deployer [done 2026-10-01, tx hashes in section 3],
+           then `BROADCAST=true RENOUNCE=true npx hardhat run scripts/transfer-roles-to-safe.ts` to drop the deployer (irreversible; run
+           once the Safes have confirmed they can call pause/unpause). Independent of the upgrade (roles live in proxy storage).
    [ ] 5c  zkSync: deploy Timelock(zkSync Safe, 48h) with zksolc 1.5.15, transferOwnership(timelock) on both ProxyAdmins (after 1a).
    [ ] 5d  Ethereum enforced options toward zkSync (30165) and Sui (30378) are empty: front-end keeps passing extraOptions
            (>=120k toward zkSync, 500k toward Sui). Optional: setEnforcedOptions on ETH USN/sUSN for both eids.
@@ -126,6 +136,15 @@ Governance path:
 =====================================================================
 3. TRANSACTIONS ALREADY EXECUTED
 =====================================================================
+sUSN receiver roles granted to the Safes (deployer EOA 0x1738…D699 -> Safe, review finding 2), 2026-10-01, scripts/transfer-roles-to-safe.ts:
+  Base   0x34a2…999F  DEFAULT_ADMIN https://basescan.org/tx/0xfe3ce35a52a6b14599cf6200c8d8740728ba6582f6d25db2c695a04ded36fbcc
+                      BLACKLIST_MGR https://basescan.org/tx/0x5c177783e9b40759f17ce049d5b59011e9df6dcac461dd9728150080f40ad408
+  Bera   0xdA67…c1eD  DEFAULT_ADMIN https://berascan.com/tx/0xfe574cc8b03bc449fb8dedcd4767aef521211c3ee4b392f7418bda0b1bfe0e18
+                      BLACKLIST_MGR https://berascan.com/tx/0x71e216752e7c405d2fdb35263c01fded3a1a930d8bd3c25187e0c394a017f29c
+  Citrea 0xdA67…c1eD  DEFAULT_ADMIN https://explorer.mainnet.citrea.xyz/tx/0x0f38b32409d8ab95306ed681ec96a3b08f30770a4eef8d4c835ac411c5ebb01e
+                      BLACKLIST_MGR https://explorer.mainnet.citrea.xyz/tx/0x0ab76b9bdd4ad8680486e06ab39498b43f662d4f78427d86f625cac4b10854df
+  Deployer still holds both roles on those 3 chains (renounce pending, step 5b'). HyperEVM already Safe-only.
+
 Implementations claimed (initialize() to the Safes), 2026-09-27:
   Base     https://basescan.org/tx/0x66d48faa67826b93263f59e74c9f04f1685b5b65e97f4ba400a91308f0b86216
   HyperEVM https://hyperevmscan.io/tx/0xfbb95e2f3682b6c993cd65366942d977fd7a20538360cf7406c609fcd9f04b57
@@ -196,6 +215,7 @@ Post-upgrade config, proposed 2026-10-01 (0/3 signed), queued right behind each 
                                    (endpoint.setConfig USN send+receive ULN eid 30165 = sUSN's 3 required DVNs)
   zkSync    nonce 38  rate-limits  0x6eb1e08c044a6d67fffd258a6ec4622114d68757fe3c76f10460a09526b4880d
             nonce 39  dvn-config   0x5246d296c87e60285461ff524195d81062c6b7daf25356905fd4f8dd37c20bec  (eid 30101)
+            nonce 40  skip-stuck-nonces 0xb1e1a22e52493015daa832ae07400ece7663a2b92d16d6390539d7b2a20bb3a3  (skip 139 + 140 on USN from ETH; step 3f)
   Base      nonce 6   rate-limits  0x6e9f5d7762ee25db64e36a4383ff60ebb512271321e573c1e70cdbe425cfca20
   Bera      nonce 5   rate-limits  0x277dd9b0853fc7c687b70effac9c3c4381c93d098bfd2b7d247b1554622ffd0b
   HyperEVM  nonce 5   rate-limits  0x8e308ebc326fdb7701d6accc08715d4542f192439041e6b5e21634ab0c147767  (1/3, from the UI, matches hyperevm-rate-limits.json)
