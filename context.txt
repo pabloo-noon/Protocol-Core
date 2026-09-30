@@ -1,0 +1,151 @@
+NOON PROTOCOL — AUDITED BRIDGE-RATE-LIMITER UPGRADE — CONTEXT
+State as of 2026-09-30. Companion files: addresses.md (all addresses),
+scripts/deploy-audited-implementations.md (runbook), scripts/out/audited-implementations.json
+(per-run record), scripts/out/safe/*.json (Safe batches).
+
+=====================================================================
+1. GITHUB
+=====================================================================
+Audited PR (branch under audit, head = fork branch):
+  https://github.com/dclf-labs/Protocol-Core/pull/25
+  head: pabloo-noon:bridge-rate-limiter-v1 -> base dclf-labs:main
+
+Fix PRs on the fork, base bridge-rate-limiter-v1 (all merged):
+  L-01 rate limiter on the 2 periphery receivers ... https://github.com/pabloo-noon/Protocol-Core/pull/14
+  L-02 delegated redeem() rejected .................. https://github.com/pabloo-noon/Protocol-Core/pull/15
+  L-04 unregistered Hyperlane origins rejected ...... https://github.com/pabloo-noon/Protocol-Core/pull/16
+  README (six receivers + lzReceive gas note) ....... https://github.com/pabloo-noon/Protocol-Core/pull/17
+  _disableInitializers on 3 periphery impls ......... https://github.com/pabloo-noon/Protocol-Core/pull/18
+
+Hashlock statuses to send:
+  [M-01] Ack. Handled operationally (endpoint clear/skip before release).
+  [L-01] Resolved. PR #14   [L-02] Resolved. PR #15   [L-03] Ack.
+  [L-04] Resolved. PR #16   [Q-01] Ack.
+
+Local branch bridge-rate-limiter-v1 is 19 commits ahead of origin (scripts,
+runbook, addresses.md, config pins) — push when reviewed.
+
+=====================================================================
+2. PROXY UPGRADES — WHAT EACH PROXY MOVES TO
+=====================================================================
+chain     token  proxy                                        old impl -> new impl (verified)
+Ethereum  USN    0xdA67B4284609d2d48e5d10cfAc411572727dc1eD  0x961e78b26F6984A2DDAC42e4CE5B8014A311608e -> 0x79FD7FE2a8EbcAE47798321b2AC97107dF3de229  USNUpgradeableHyperlane
+Ethereum  sUSN   0xE24a3DC889621612422A64E6388927901608B91D  0xEbBcbC6672683e1956125e7c5e89E14CeAC8cd3D -> 0xeF2eA4250B7CE4D0aA9Ca70607ECeF278C6EAB15  StakingVaultOFTUpgradeableHyperlane
+Base      sUSN   0x34a2798D47b238A7CbA9D87D49618DEE6C4D999F  0xdA67B4284609d2d48e5d10cfAc411572727dc1eD -> 0xa02Ca8C6130B75b320FAa785034E95D4374A8942  StakedUSNHyperlane
+HyperEVM  sUSN   0x34a2798D47b238A7CbA9D87D49618DEE6C4D999F  0xdA67B4284609d2d48e5d10cfAc411572727dc1eD -> 0xffC95e7E447DC94DcE706B8afda751349E676227  StakedUSNHyperlane (gains pause)
+Citrea    sUSN   0xdA67B4284609d2d48e5d10cfAc411572727dc1eD  0x0aDa1cb43aC67FFfA2773B169920bfAB4c6391B7 -> 0x6D1019bdbe1Da163134Aba821bBfc1cCAEb988a8  StakedUSNHyperlane
+Bera      sUSN   0xdA67B4284609d2d48e5d10cfAc411572727dc1eD  0x0aDa1cb43aC67FFfA2773B169920bfAB4c6391B7 -> 0x657284c8337ab91b1a7d4eb66Be97596f4878117  StakedUSNHyperlane
+zkSync    USN    0x0469d9d1dE0ee58fA1153ef00836B9BbCb84c0B6  0xa5b228237bEf9bC804D8d6E7c76d0853a406bf34 -> 0xb00B492099323E386dFD1E014850Ca16396E8C22  USNOFTHyperlane (gains pause)
+zkSync    sUSN   0xB6a09d426861c63722Aa0b333a9cE5d5a9B04c4f  0x9F80bbe82dBad5D74904c83bD8990c8Ba9dfe82a -> 0x8B9E886B6850615911c61a7cd10c9C6630d1A03d  StakedUSNOFTHyperlane (gains pause)
+
+BridgeRateLimiter per chain (owner = chain Safe):
+  Ethereum 0xe8c94FA4FEdFa21B1d0D0Dd78E41bCE9d99d959F   Base 0xEFff8C4260aF5DA5eB26194CB45407f497756db7
+  HyperEVM 0x77044C9C050BcFD80d1Ab42AA070bD3f65B32Ef2   Citrea 0xC79A424a9FB6DD94cD54715b97F5D0703CEDE815
+  Bera     0x51A30E647D33A044967FA3DBb04d6ED6F45455F6   zkSync 0xE69d7C7147B7ED370f28fedEd06FbAB0BD14455E
+
+Verified-source links (explorer):
+  https://etherscan.io/address/0x79FD7FE2a8EbcAE47798321b2AC97107dF3de229#code
+  https://etherscan.io/address/0xeF2eA4250B7CE4D0aA9Ca70607ECeF278C6EAB15#code
+  https://etherscan.io/address/0xe8c94FA4FEdFa21B1d0D0Dd78E41bCE9d99d959F#code
+  https://basescan.org/address/0xa02Ca8C6130B75b320FAa785034E95D4374A8942#code
+  https://basescan.org/address/0xEFff8C4260aF5DA5eB26194CB45407f497756db7#code
+  https://hyperevmscan.io/address/0xffC95e7E447DC94DcE706B8afda751349E676227#code
+  https://hyperevmscan.io/address/0x77044C9C050BcFD80d1Ab42AA070bD3f65B32Ef2#code
+  https://explorer.mainnet.citrea.xyz/address/0x6D1019bdbe1Da163134Aba821bBfc1cCAEb988a8#code
+  https://explorer.mainnet.citrea.xyz/address/0xC79A424a9FB6DD94cD54715b97F5D0703CEDE815#code
+  https://berascan.com/address/0x657284c8337ab91b1a7d4eb66Be97596f4878117#code
+  https://berascan.com/address/0x51A30E647D33A044967FA3DBb04d6ED6F45455F6#code
+  https://explorer.zksync.io/address/0xb00B492099323E386dFD1E014850Ca16396E8C22#contract
+  https://explorer.zksync.io/address/0x8B9E886B6850615911c61a7cd10c9C6630d1A03d#contract
+  https://explorer.zksync.io/address/0xE69d7C7147B7ED370f28fedEd06FbAB0BD14455E#contract
+
+Governance path:
+  ETH / Base / HyperEVM / Citrea / Bera: Safe -> Timelock.scheduleUpgrade -> delay (48h, HyperEVM 24h) -> Safe -> Timelock.executeUpgrade -> ProxyAdmin.upgradeAndCall
+  zkSync: Safe owns the ProxyAdmins directly -> ProxyAdmin.upgradeAndCall (no timelock yet)
+
+=====================================================================
+3. TRANSACTIONS ALREADY EXECUTED
+=====================================================================
+Implementations claimed (initialize() to the Safes), 2026-09-27:
+  Base     https://basescan.org/tx/0x66d48faa67826b93263f59e74c9f04f1685b5b65e97f4ba400a91308f0b86216
+  HyperEVM https://hyperevmscan.io/tx/0xfbb95e2f3682b6c993cd65366942d977fd7a20538360cf7406c609fcd9f04b57
+  Citrea   https://explorer.mainnet.citrea.xyz/tx/0x2a6d21f5affb80d47976cb7359a784d5f0566d96ddd54374cb7d644d7778cdb5
+  Bera     https://berascan.com/tx/0x29b6e2c1542b3c6a9f19f18283065df9ca6bd6683b967d26cd730bd76ebe9089
+  zkSync   https://explorer.zksync.io/tx/0x5718ed684887911b64edc3c48071aec90af83e6dc83d0d6f30edbb8f74a145b3 (USN)
+           https://explorer.zksync.io/tx/0x1b10f337f6629df0e4e9f415e00fe6d355872b1dee74607301f50e91db4e4320 (sUSN)
+  TAC      0xe29add2435a1ff177e6783775f473563acf322117c2a58c812aa65f7c4341a22 (USN), 0x56ecb4e092aba96993b5262dbece688e78e32ff154a06e5514c617325eda5e1f (sUSN)
+  Sophon   0x443712b36afb2ef4c186fc9eee8c1730aee188894f2fa83d39b709e67248b9b0 (USN), 0x3aeddf89fea0fcd1371f2bcbbf8bea22936c8dc05c8a97f6f1cd3ccfd02759cf (sUSN)
+
+Deployments (deployer 0x173806021b18c4E60170e412DC88F991eB00D699):
+  Ethereum limiter  https://etherscan.io/tx/0xef77feba6a1b1379cd8a1b27764a061ec03447d638d91b6f78f5b980c6ed4818
+  Ethereum USN impl https://etherscan.io/tx/0x6b3086ab16e1523156984ae8a6c413e16d4387793abf312967f74dbfc3e0a1d1
+  Ethereum vault    https://etherscan.io/tx/0x412dea7f13ed425bba33dd25ec3e40c429ca490518efe8b2ac859991cb285a77
+  Base limiter      https://basescan.org/tx/0x2df1f0c27345d4ebde7a2967d81928d50a3df7144e92d2ea13eafff61faf1a6b
+  Base impl         https://basescan.org/tx/0x3f42a79f90da2f3cd77363237c0b998b0eca3aa4d5816bfb4cacc8f66bc2a6f5
+  HyperEVM limiter  https://hyperevmscan.io/tx/0x85aacaac3c9bf7e37c11f1e58ac388cf57463ae9be267512edb32f47895d51ea
+  HyperEVM impl     https://hyperevmscan.io/tx/0xd17e1112c1523f48501ced18b17e0d2043f4d689bfdb9d2b360829bf267b0c42
+  Bera limiter      https://berascan.com/tx/0xc3bf2c01c75fc237ba9693f41897f0d047e9cd92f5430dea92a7fc8ac5b35275
+  Bera impl         https://berascan.com/tx/0xa76b39199bcd9b72f08c9e7752cb3e50923a0ec167db96e08129b21529623ab9
+  Citrea limiter    https://explorer.mainnet.citrea.xyz/tx/0x0f8bd20c6db3493648f1c3c3a72c4ed6070e5b79b730f0fd3e7c5529cf62a4e7
+  Citrea impl       https://explorer.mainnet.citrea.xyz/tx/0x4792c8b2f3cd83927a6967a32bedc170b7a978719b61117b47bd1722db97fff3
+  zkSync USN impl   https://explorer.zksync.io/tx/0xb0c0e9f2200f0e6086023e98dd1d824e95a7dbb36e9c25beefa04e8b130a6872
+  zkSync sUSN impl  https://explorer.zksync.io/tx/0x794b334859bf1c23f06475f84c55e53d191ebf3e8f43f3a46c38618736feb70a
+  (zkSync limiter 0xE69d…455E deployed in the same run; abandoned zksolc-1.5.7 set: 0xf560…44EC, 0xa2c4…6488, 0x081F…0Ca2)
+  Mainnet RedeemHandlerV2 https://etherscan.io/tx/0x7a0c4889558b09f2a36d26fd17ba549878509f37e9720ea5feffcd02c8074e54 -> 0xAb0c423975B446e785E21B9b10F3B421c8ED9197
+
+Phase 1 — Timelock.scheduleUpgrade (Safe txs, executed 2026-09-28):
+  Ethereum  Safe nonce 345  https://etherscan.io/tx/0x378af8384b0367504dfdaaea7721f8afa49c95da89e1c67e672af0a951f85761   (USN + sUSN, MultiSend)
+  Base      Safe nonce 4    https://basescan.org/tx/0xb67b03e82872cde2451adacaaeb2cdbad98449a5e0ec2c095e4afd24d9f59061
+  Bera      Safe nonce 3    https://berascan.com/tx/0xff93eb8022ad825defe3b49dfe54628979f7ce5c27934be3228ddc505b3d16a8
+  HyperEVM  via Transaction Builder JSON (no Safe service)
+  Citrea    via Transaction Builder JSON (no Safe service)
+  Timelock op ids: ETH USN 0x06cde24532e50f057d3d109c89f2cbb793aba243268c8f446fef37a06b4ed941, ETH sUSN 0x23d31f502eac6ffcbf206d15b5261842b93951dda9154755dcd9ec76b01019d3,
+                   Base 0x75ef29445d8fda620cd745079106f162bc6b1777362dd8b78761355493cef052, HyperEVM 0xf5ffefdfacd163d8b41dfe70e2c6f81c8838a5f65c1fa5412f762f02e44fbc48,
+                   Citrea 0x0b12851d73d331a8d4d648fdb403217473d1a2d2587d1a82a415b26f503240ef, Bera 0xbc15adbc1673522a3a1abdc617f2286cc91504834870e72ba0042e157054e13d
+  All delays elapsed on 2026-09-30 (HyperEVM 09-29 16:18 UTC; ETH 16:11, Bera 16:14, Citrea 16:16, Base 16:18 UTC).
+
+=====================================================================
+4. AWAITING SIGNATURES — THE UPGRADE TXS THEMSELVES (proposed, 0/3 signed)
+=====================================================================
+Safe queue links (proposed 2026-09-30 by delegate 0xcC2447B495cBc8c2263619Ff3dc4c13604c9b11f):
+  zkSync    nonce 37  safeTxHash 0xac8c7b25a9525b9cd1ce1f1d1f951d13d877d4c5579d4304102cc4fb1052e0ca
+            https://app.safe.global/transactions/queue?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263
+            upgradeAndCall(USN), upgradeAndCall(sUSN), setRateLimiter x2, setEnforcedOptions(30101, SEND, 120000 gas) x2
+  Ethereum  nonce 346 safeTxHash 0x7bd94950f153146b648d51c025ce44f55b56c2e9587c955bed84aada37bb3cb7
+            https://app.safe.global/transactions/queue?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f
+            executeUpgrade(USN), setRateLimiter(USN), executeUpgrade(sUSN), setRateLimiter(sUSN)
+  Base      nonce 5   safeTxHash 0x70f7fcc20b2e090c324850675e70c616b943bce92a04f19700cbca6de0dbe234
+            https://app.safe.global/transactions/queue?safe=base:0xf56d33ef52642ce226A566610A979DC8d954592D
+  Bera      nonce 4   safeTxHash 0xfc4da63324b00f9931e440bfc288fc68820e3e20a1d58ad7e804c7cdd58a571f
+            https://app.safe.global/transactions/queue?safe=berachain:0x94E9f383b085D32973634EA7c9bB2038eF9a3C58
+  HyperEVM  Safe 0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8 — import scripts/out/safe/hyperevm-2-execute.json in Transaction Builder (no service)
+  Citrea    Safe 0xB2aD758Ee2710527A28d906F9588938c2e5cFc80 — scripts/out/safe/citrea-2-execute.json via scripts/safe-raw-tx.ts (hash / sign x3 / exec; no Safe UI)
+
+Execution order: zkSync nonce 37 BEFORE Ethereum nonce 346 (enforced lzReceive gas must be raised before the mainnet _credit gains the limiter hook; otherwise zkSync->ETH deliveries stall at 65k gas). All others independent.
+
+Post-execution checks per proxy: rateLimiter() == limiter, paused() == false, totalSupply unchanged,
+handle() from an unregistered origin reverts InvalidRemoteToken. Re-running
+`npx hardhat run scripts/propose-upgrade.ts` prints "already on <impl>" per chain.
+
+=====================================================================
+5. NEXT STEPS (after the upgrades execute)
+=====================================================================
+1. setRateLimits on every limiter (all buckets start at limit 0 = unlimited). Routes:
+     Ethereum: USN <-> zkSync (LZ 30165, HL 324); sUSN <-> zkSync (LZ 30165, HL 324), Sui (LZ 30378),
+               Base 8453 / HyperEVM 999 / Citrea 4114 / Bera 80094 / Starknet 358974494 (HL), in and out.
+     zkSync: USN/sUSN <-> ETH (LZ 30101, HL 1).  Base/HyperEVM/Citrea/Bera: sUSN <-> ETH (HL 1).
+     TAC 239 + Sophon 50104 on ETH/zkSync: limit 1 wei in+out (= closed).
+   Numbers to be decided; a propose-rate-limits.ts batching per Safe is the natural next script.
+2. USN ETH<->zkSync LayerZero DVNs: ETH->zkSync leg is 1 required DVN (LayerZero Labs), which no
+   longer signs as sole DVN since the KelpDAO incident -> leg is dead. setConfig to 3 required
+   DVNs on ETH USN (eid 30165, send+receive) and zkSync USN (eid 30101, send+receive), same set as sUSN.
+3. Close TAC + Sophon Hyperlane routes: registerHyperlaneRemoteToken(239|50104, 0x…dEaD) on ETH USN/sUSN
+   and zkSync USN/sUSN. Zero Sophon-side LZ peers (Sophon Safe 0x553d…) and Flare-side peers
+   (0xF98A…8A41, 0x6086…C2Bd; owner = deployer EOA).
+4. Upgrade Timelock (48h) in front of the zkSync ProxyAdmins, after nonce 37 executes:
+   deploy Timelock(zkSync Safe, 48h) with zksolc 1.5.15, transferOwnership(timelock) on both ProxyAdmins.
+5. Front-end: extraOptions for ETH->zkSync sends (no enforced value on ETH); vault wrappers
+   depositWithPermit / *WithSlippageCheck removed (0 on-chain calls ever).
+6. Repo: push bridge-rate-limiter-v1 (19 commits), npm ci (undo --no-save verify-plugin install),
+   update addresses.md with execution tx hashes. Docs: mark Sophon/TAC closed, Flare none,
+   add Starknet + sUSN chains + limiter addresses. Send Hashlock statuses (section 1).
