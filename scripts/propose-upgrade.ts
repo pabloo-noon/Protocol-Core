@@ -26,6 +26,7 @@
  *   npx hardhat run scripts/propose-upgrade.ts                # all chains with deployed implementations → JSON files only
  *   CHAINS=base,bera npx hardhat run scripts/propose-upgrade.ts
  *   NO_LIMITER=true ...                                       # leave setRateLimiter out of the batch
+ *   ENFORCED_LZRECEIVE_GAS=120000 ...                         # zkSync only: add setEnforcedOptions(30101, SEND) to the batch
  *   PROPOSE=true ...                                          # also queue the batch in the Safe via the Transaction Service
  *       needs SAFE_API_KEY and SAFE_PROPOSER_PRIVATE_KEY (an owner of the Safe) in .env;
  *       phase 1 is proposed when nothing is scheduled, phase 2 once the delay has elapsed
@@ -159,6 +160,8 @@ const ABI = [
   'function owner() view returns (address)',
   'function rateLimiter() view returns (address)',
   'function setRateLimiter(address)',
+  'function setEnforcedOptions((uint32 eid, uint16 msgType, bytes options)[] _enforcedOptions)',
+  'function enforcedOptions(uint32 eid, uint16 msgType) view returns (bytes)',
   'function upgradeAndCall(address proxy, address implementation, bytes data) payable',
   // Timelock (contracts/periphery/Timelock.sol)
   'function delay() view returns (uint256)',
@@ -726,6 +729,36 @@ async function main() {
             `     + ${t.token}.setRateLimiter(${limiter}) ${chain.name === 'zksync' ? 'in the same batch' : 'in phase 2 (after executeUpgrade)'}`
           );
         }
+      }
+    }
+
+    // zkSync only: raise the enforced lzReceive gas toward Ethereum in the same
+    // batch (ENFORCED_LZRECEIVE_GAS=120000). Type-3 option: worker 1, type 1, uint128 gas.
+    if (chain.name === 'zksync' && process.env.ENFORCED_LZRECEIVE_GAS) {
+      const gas = BigInt(process.env.ENFORCED_LZRECEIVE_GAS);
+      const options =
+        '0x0003' + '01' + '0011' + '01' + gas.toString(16).padStart(32, '0');
+      for (const t of chain.tokens) {
+        const cur: string = await new ethers.Contract(t.proxy, ABI, p)
+          .enforcedOptions(30101, 1)
+          .catch(() => '0x');
+        if (cur.toLowerCase() === options.toLowerCase()) {
+          console.log(
+            `     ${t.token}: enforcedOptions(30101, SEND) already ${gas} gas ✓`
+          );
+          continue;
+        }
+        phase1.push(
+          tx(
+            t.proxy,
+            iface.encodeFunctionData('setEnforcedOptions', [
+              [{ eid: 30101, msgType: 1, options }],
+            ])
+          )
+        );
+        console.log(
+          `     + ${t.token}.setEnforcedOptions(eid 30101, SEND, lzReceive gas ${gas}) (currently ${cur})`
+        );
       }
     }
 
