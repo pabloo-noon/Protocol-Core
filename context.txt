@@ -130,22 +130,39 @@ handle() from an unregistered origin reverts InvalidRemoteToken. Re-running
 =====================================================================
 5. NEXT STEPS (after the upgrades execute)
 =====================================================================
+Decided: 4,000,000 tokens per route per 8h sliding window (28800s), inbound and outbound, on
+every live route; TAC 239 + Sophon 50104 = 1 wei (closed) + Hyperlane remote token set to 0x…dEaD.
+Scripts (all dry-run + simulated from each Safe; PROPOSE=true queues via the Safe service, which
+currently answers HTTP 403 "Your IP address is not allowed" for egress IP 1.47.18.218 -> fix the
+SAFE_API_KEY IP allowlist, or import the JSON files in the Safe UI Transaction Builder):
+   scripts/propose-rate-limits.ts  -> scripts/out/safe/<chain>-rate-limits.json
+       ethereum 6 tx (USN 10 cfgs + sUSN 20 cfgs + 4 dead-route regs), zksync 6 tx (USN 10 + sUSN 14 + 4 regs),
+       base 3 tx (sUSN 10 cfgs + 2 regs), hyperevm 3 tx (sUSN 12 + 2 regs), citrea 1 tx, bera 1 tx.
+       Must be executed AFTER each proxy upgrade (setRateLimits is on the limiter; the regs need the new impl
+       only for the dEaD semantics, they call the token). Idempotent: re-run prints only what is still off-target.
+   scripts/propose-dvn-config.ts   -> scripts/out/safe/{ethereum,zksync}-dvn-config.json (2 tx each: endpoint.setConfig
+       send + receive ULN on USN, copied byte-for-byte from sUSN: 3 required DVNs). Independent of the upgrade.
+   scripts/close-sophon-flare-peers.ts -> scripts/out/safe/sophon-zero-peers.json (4 tx, Sophon Safe 0x553d…,
+       no service: MODE=hash/sign/exec with scripts/safe-raw-tx.ts). Flare DONE (deployer EOA):
+       sUSN 0xF98A…8A41 setPeer(30101,0) tx 0xbb73382601d012d4c70e921b638dd55f64c1dff62f445d479050b9f6107828fa
+       USN  0x6086…C2Bd setPeer(30101,0) tx 0x2e2f7c924487f40342e1e109792381ba4e58c71b6e9d5a76107127dccc863522
+   HyperEVM / Citrea have no Safe service either: import the JSON in the Safe UI, or safe-raw-tx.ts on Citrea.
 1. setRateLimits on every limiter (all buckets start at limit 0 = unlimited). Routes:
      Ethereum: USN <-> zkSync (LZ 30165, HL 324); sUSN <-> zkSync (LZ 30165, HL 324), Sui (LZ 30378),
                Base 8453 / HyperEVM 999 / Citrea 4114 / Bera 80094 / Starknet 358974494 (HL), in and out.
      zkSync: USN/sUSN <-> ETH (LZ 30101, HL 1).  Base/HyperEVM/Citrea/Bera: sUSN <-> ETH (HL 1).
-     TAC 239 + Sophon 50104 on ETH/zkSync: limit 1 wei in+out (= closed).
-   Numbers to be decided; a propose-rate-limits.ts batching per Safe is the natural next script.
+     TAC 239 + Sophon 50104 on ETH/zkSync/Base/HyperEVM: limit 1 wei in+out (= closed).
 2. USN ETH<->zkSync LayerZero DVNs: ETH->zkSync leg is 1 required DVN (LayerZero Labs), which no
    longer signs as sole DVN since the KelpDAO incident -> leg is dead. setConfig to 3 required
    DVNs on ETH USN (eid 30165, send+receive) and zkSync USN (eid 30101, send+receive), same set as sUSN.
-3. Close TAC + Sophon Hyperlane routes: registerHyperlaneRemoteToken(239|50104, 0x…dEaD) on ETH USN/sUSN
-   and zkSync USN/sUSN. Zero Sophon-side LZ peers (Sophon Safe 0x553d…) and Flare-side peers
-   (0xF98A…8A41, 0x6086…C2Bd; owner = deployer EOA).
+   (batches ready, see above). zkSync enforced lzReceive gas 120k is already inside the queued nonce-37 batch.
+3. Close TAC + Sophon Hyperlane routes: registerHyperlaneRemoteToken(239|50104, 0x…dEaD) on ETH/zkSync/
+   Base/HyperEVM USN/sUSN (in the rate-limits batches). Zero Sophon-side LZ peers (JSON ready).
+   Flare-side peers: done (tx above).
 4. Upgrade Timelock (48h) in front of the zkSync ProxyAdmins, after nonce 37 executes:
    deploy Timelock(zkSync Safe, 48h) with zksolc 1.5.15, transferOwnership(timelock) on both ProxyAdmins.
 5. Front-end: extraOptions for ETH->zkSync sends (no enforced value on ETH); vault wrappers
    depositWithPermit / *WithSlippageCheck removed (0 on-chain calls ever).
-6. Repo: push bridge-rate-limiter-v1 (19 commits), npm ci (undo --no-save verify-plugin install),
+6. Repo: push bridge-rate-limiter-v1 (21 commits), npm ci (undo --no-save verify-plugin install),
    update addresses.md with execution tx hashes. Docs: mark Sophon/TAC closed, Flare none,
    add Starknet + sUSN chains + limiter addresses. Send Hashlock statuses (section 1).
