@@ -57,7 +57,8 @@ https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b
 USN DVN config = sUSN (3 required) toward Ethereum (nonce 39)
 https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x5246d296c87e60285461ff524195d81062c6b7daf25356905fd4f8dd37c20bec
 
-[zkSync] 3e. Skip stuck USN inbound nonces 139 + 140 from Ethereum (nonce 40)
+[zkSync] 3e. DONE 2026-10-01 18:01 UTC — https://explorer.zksync.io/tx/0xd2579e1955d403f46412040096f426e289d6b72fa829b3feacc523acdfab5ed8
+Skip stuck USN inbound nonces 139 + 140 from Ethereum (nonce 40)
 https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0xb1e1a22e52493015daa832ae07400ece7663a2b92d16d6390539d7b2a20bb3a3
 
 [Base] 3f. Rate limits 4M/8h, TAC + Sophon closed (nonce 6)

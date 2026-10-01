@@ -118,4 +118,14 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
     limiter: every live route in+out = 4M / 28,800 s on USN (LZ 30165, HL 324, HL 358974494) and sUSN (LZ 30165, LZ 30378, HL 324/8453/999/4114/80094/358974494); HL 239 + 50104 = 1 wei; remoteTokens(239|50104) = dEaD on both
     DVNs: USN send/recv toward zkSync == sUSN (Horizen 0x3802…, Frax 0x3865…, LZ Labs 0x589d…); zkSync USN send/recv toward ETH == sUSN (Horizen 0x1253…, Frax 0x2Eb8…, LZ Labs 0x620A…)
     handle(): unregistered origin, old TAC sender and old Sophon sender revert InvalidRemoteToken; zkSync 1 wei and Bera 1 wei pass; zkSync 4M + 1 wei reverts (rate limit)
-    channels: USN inbound from zkSync 119 (was 118), sUSN from zkSync 50, sUSN from Sui 11 (was 10) -> deliveries into Ethereum already succeeded after the upgrade (see next entry)
+    channels: USN inbound from zkSync 119, sUSN from zkSync 50, sUSN from Sui 11 — the two new deliveries (zkSync->ETH USN 11:15 UTC, Sui->ETH sUSN 10:15 UTC)
+    landed BEFORE the Ethereum upgrade, but both already carried lzReceive gas 185,000 = enforced 120k (zkSync nonce 37 / Sui 1b) + sender 65k,
+    so the enforced options are proven effective on both source chains; executor txs used ~86-88k on the old impl.
+
+2026-10-01 18:01:10 UTC  [zkSync] 3e  Safe nonce 40 — EndpointV2.skip(USN, 30101, ETH USN, 139) + skip(…, 140)
+  tx  https://explorer.zksync.io/tx/0xd2579e1955d403f46412040096f426e289d6b72fa829b3feacc523acdfab5ed8   status 1, gas 144,586
+  safeTxHash 0xb1e1a22e52493015daa832ae07400ece7663a2b92d16d6390539d7b2a20bb3a3 — InboundNonceSkipped x2 (139, 140); zkSync Safe nonce now 41
+  Verified on-chain: USN channel from ETH inboundNonce 140 = lazyInboundNonce 140 = ETH outboundNonce 140 -> channel in sync; both payload hashes empty.
+  scripts/verify-rollout.ts CHAINS=zksync: 42 PASS, 0 FAIL. zkSync is now fully done (1a, 3c, 3d, 3e).
+  Still open from this: refund of the two skipped senders — 50,000 USN to 0x95780F943b6361FB11eEd893cf1237Dd9B3F54AF (ETH tx 0xc9bc0922…3c76)
+  and 0.02 USN to 0x8b937c5395D95a8c8948C7C5B844e1541798d90C (ETH tx 0xc27bb7d5…9209). Both were debited on Ethereum, nothing minted on zkSync.

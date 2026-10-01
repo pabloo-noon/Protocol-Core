@@ -39,7 +39,7 @@ zkSync the config txs cannot run before the upgrade tx.
    [x] 3c' HyperEVM nonce 5 DONE 2026-10-01 11:42 UTC — tx 0x8f4b250ccfb3196e8356b4a007d7f9128044c4c7f5402a4fb8ba23b17f9dbd42 (12 buckets at target, TAC/Sophon dEaD; log.txt)
    [x] 3d  DONE 2026-10-01 17:55 UTC — Ethereum nonce 348 executed, tx 0xb5d86af5964c16f44d9e69a37b9fcc12a84a5999d3a76277379d4dce33d36120 (log.txt)
    [x] 3e  DONE 2026-10-01 17:56 UTC — zkSync nonce 39 executed, tx 0xabd03aedf642272f42cf0124022f2930d289fc7edb527e318054e2d47d20c2f5 (log.txt)
-   [ ] 3f  zkSync   nonce 40   EndpointV2.skip(USN, 30101, ETH USN, 139) + skip(…, 140)                    0/3
+   [x] 3f  DONE 2026-10-01 18:01 UTC — zkSync nonce 40 executed, tx 0xd2579e1955d403f46412040096f426e289d6b72fa829b3feacc523acdfab5ed8; channel in sync at 140 (log.txt). Refunds still open.
        3d + 3e revive the USN ETH<->zkSync LayerZero leg (currently dead: LZ Labs no longer signs as sole DVN).
        3f is REQUIRED for the revival to work: the zkSync endpoint has that channel at inboundNonce 138 while Ethereum
        sent 140; nonces 139/140 have no payload hash (never verified by the sole DVN) and can never verify once 3e changes
