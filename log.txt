@@ -79,3 +79,17 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
     limiter HL 1 in + out = 4,000,000 / 28,800 s
     behaviour (eth_call as the mailbox): unregistered origin reverts InvalidRemoteToken; ETH 1 wei passes; ETH 4M + 1 wei reverts (rate limit)
   Bera is now fully done (2c + 3g).
+
+2026-10-01 15:42:38 UTC  [Bera] test bridge ETH -> Bera, 0.01 sUSN minted to 0x1738…D699 (tx 0x96a97f064e7581c2f0deba5c5fe50bf019c1fffa72e5e08eba35a7288d508e62, via the Bera mailbox)
+  Limiter check: raw storage of the inbound bucket (sUSN, HL, origin 1) shows amountInFlight = 0.01 and lastUpdated = the mint timestamp,
+  so the delivery was recorded. getRateLimit() reads "available 4,000,000" right after because the bucket refills at limit/window
+  = 4,000,000 / 28,800 s ≈ 139 sUSN per second, so 0.01 is refilled within the same second. Limits behave as designed.
+
+2026-10-01 17:03:27 UTC  [zkSync] 3c  Safe nonce 38 — rate limits 4M/8h + TAC/Sophon closed (1 wei) + remote tokens 0x…dEaD on USN and sUSN
+  tx  https://explorer.zksync.io/tx/0x611c544f6c67e66954b3dc440c8b28e34afdae914b815fbae54780cc0a7b8e9e
+  safeTxHash 0x6eb1e08c044a6d67fffd258a6ec4622114d68757fe3c76f10460a09526b4880d — status 1, gas 1,487,108, Safe nonce now 39
+  (reported as "3d" but the service maps this tx to nonce 38 = rate limits; 3d = nonce 39 DVN config is still queued)
+  Verified on-chain after execution:
+    USN  buckets LZ 30101 / HL 1 / HL 358974494 in+out = 4M / 28,800 s; HL 239 / 50104 in+out = 1 wei; remoteTokens(239|50104) = dEaD
+    sUSN buckets LZ 30101 / HL 1 / 999 / 8453 / 358974494 in+out = 4M / 28,800 s; HL 239 / 50104 = 1 wei; remoteTokens(239|50104) = dEaD
+    USN DVN config toward ETH still send 2 / recv 1 required (nonce 39 pending); USN inbound nonce from ETH still 138 (nonce 40 pending)

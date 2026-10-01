@@ -46,7 +46,8 @@ https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a33
 [Ethereum] 3b. USN DVN config = sUSN (3 required) toward zkSync (nonce 348)
 https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0x67b3f3af5c0178fe392d822aa61138501935c73b470c805f3ef919e2ac38f124
 
-[zkSync] 3c. Rate limits 4M/8h, TAC + Sophon closed (nonce 38)
+[zkSync] 3c. DONE 2026-10-01 17:03 UTC — https://explorer.zksync.io/tx/0x611c544f6c67e66954b3dc440c8b28e34afdae914b815fbae54780cc0a7b8e9e
+Rate limits 4M/8h, TAC + Sophon closed (nonce 38)
 https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x6eb1e08c044a6d67fffd258a6ec4622114d68757fe3c76f10460a09526b4880d
 
 [zkSync] 3d. USN DVN config = sUSN (3 required) toward Ethereum (nonce 39)
