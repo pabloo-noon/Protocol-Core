@@ -127,3 +127,37 @@ checks apply): 30 slot changes, all expected, 0 unexpected:
   - ERC20._totalSupply drifted slightly on ETH USN, zkSync USN/sUSN and Bera (normal bridge traffic between the two blocks)
 Everything else is byte-identical before and after: mailbox, ISM, live remote tokens, admin/permissionless (ETH USN),
 __gap region (vault), name/symbol, owner/pendingOwner, roles, paused, asset, peers, other enforced options, msgInspector, preCrime.
+
+=====================================================================
+7. EXTRA CHECKS (scripts/post-upgrade-checks.ts, run 2026-10-02)
+=====================================================================
+A. Deployed bytecode == repo build: all 8 implementations match the local build exactly (EVM: build-info output with
+   immutable slots masked; zkSync: artifacts-zk, byte-identical), and all 6 limiters match exactly. The code on chain is the
+   code in the repo at HEAD, independent of explorer verification.
+B. Function surface (old verified ABI vs new ABI): no unexpected removal anywhere. Added everywhere: rateLimiter(),
+   setRateLimiter(address); HyperEVM and zkSync sUSN also gain pause()/unpause()/paused(). ETH vault removed exactly the 5
+   documented wrappers plus the public getters of two constants that became internal (REBASE_MANAGER_ROLE(),
+   STUCK_MESSAGE_TIMELOCK()) — rebase(), setRebaseManager() and the stuck-message flow are unchanged. Every non-view
+   function of each new ABI dispatches on its proxy (the 4 LayerZero entry points with dynamic calldata are proven by the
+   smoke tests instead).
+C. LayerZero delivery under the enforced budget: lzReceive simulated from the endpoint with gasLimit = 120,000 passes on
+   ETH USN (cold recipient 114,331 / warm 97,096 gas) and ETH sUSN vault (94,941 / 76,819). zkSync side simulates OK
+   (no fixed budget there; senders pass extraOptions).
+D. Hyperlane delivery gas: handle() for a cold recipient costs 94.5k (Bera) to 188k (Citrea); senders pay the IGP for
+   239,116 gas on every dispatch (GasPayment events), so the relayer budget covers the limiter overhead with margin.
+E. setRateLimiter: stranger reverts (OwnableUnauthorizedAccount / AccessControlUnauthorizedAccount); owner pointing at an
+   EOA reverts InvalidRateLimiter on all 8.
+F. Explorer verification: every new implementation shows as verified (Etherscan-family: solc 0.8.28; zkSync: zksolc 1.5.15;
+   Citrea Blockscout: verified).
+Traffic since the upgrades: 0 failed transactions to any proxy on any chain; bridge events present on ETH, zkSync, HyperEVM,
+Bera (Base's explorer API needs a paid plan for txlist; its events/getters are covered by the sweeps).
+
+=====================================================================
+8. END-TO-END PROOF — SMOKE TESTS (2026-10-01 18:23–18:27 UTC, deployer wallet)
+=====================================================================
+  USN  Ethereum -> zkSync  0.01 USN   DELIVERED (3 DVNs, lzReceive 120k) — src 0xbbd8e2f7…e090, dst 0x427fa326…7418.
+       First delivery on this leg since April (nonce 138); confirms ETH 348 + zkSync 39 + the skips (40) revived the route.
+  sUSN zkSync -> Ethereum  0.005 sUSN DELIVERED (3 DVNs, enforced 120k) — src 0x4de9df20…ff4d, dst 0x6a05f96b…7d14,
+       executor tx gasUsed 124,262 incl. endpoint overhead — the enforced budget is sufficient on the upgraded vault.
+  Hyperlane ETH -> Bera 0.01 sUSN delivered on the upgraded receiver and recorded by the limiter (section 3).
+With these, every item of the rollout is both executed and proven live. Remaining work is only the items in section 4.

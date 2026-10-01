@@ -147,3 +147,12 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
 === ROLLOUT STATUS 2026-10-01 18:15 UTC: every queued Safe tx on all six chains is executed. scripts/verify-rollout.ts (all chains): 151 PASS, 4 FAIL —
     the 4 FAILs are the Sophon-side peers (step 4a, raw signing, intentionally held until the 229.70 USN Sophon->ETH recovery is decided).
     (Safe Transaction Service returned 403 again for egress IP 1.47.85.210 — Base hashes were taken from the Safe's on-chain ExecutionSuccess events.)
+
+2026-10-01 18:23–18:27 UTC  SMOKE TESTS — both LayerZero legs exercised end to end after the upgrade (deployer 0x1738…D699, 3 DVNs each, DELIVERED on LZ Scan)
+  USN  Ethereum -> zkSync  0.01 USN   sent 18:23:59 tx 0xbbd8e2f71a611960c812ad5bee894cf394387d02294ab160dc42b996cd19e090 (extraOptions lzReceive 120k)
+                                       delivered 18:27:28 zkSync tx 0x427fa3265bd136bb539ca7d2273cf8bd9a238d42904a57570a63d53cd7707418 — first USN delivery on this leg since nonce 138 (April): the leg is revived
+  sUSN zkSync -> Ethereum  0.005 sUSN sent 18:24:17 tx 0x4de9df2013450cc2443bac66d09a72402a0b2ede9c66dd9b7136f75799b9ff4d (enforced 120k, no extraOptions)
+                                       delivered 18:27:35 ETH tx 0x6a05f96b62844e8e97ae4fc9006d80ea42db274813204df09f7f2245654e7d14, executor gasUsed 124,262 incl. endpoint overhead — the 120k lzReceive budget holds on the upgraded vault
+  Hyperlane: ETH -> Bera 0.01 sUSN (15:39 -> 15:42 UTC) delivered on the upgraded Bera receiver and recorded by its limiter (see above).
+
+2026-10-02  EXTRA POST-UPGRADE CHECKS (scripts/post-upgrade-checks.ts + scripts/storage-sanity.ts) — see post-upgrade.txt sections 6-8. No failed transactions to any proxy since the upgrades.
