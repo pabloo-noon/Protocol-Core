@@ -312,9 +312,16 @@ Enforced options: EMPTY ON BOTH SIDES.
      set_enforced_options(&mut OApp, &AdminCap, eid u32, msg_type u16, options vector<u8>)
        OApp     0xe8a26b0ba4f665eb7f1bc1996ed9b93892bc9ed67013321b5b71de1f89b7029f
        AdminCap 0x429cd02c7835a791701a612924b6d6788235a05e5a83de3032ac2dddba8cd662
-       eid 30101, msg_type 1 (SEND), options 0x00030100110100000000000000000000000000000001d4c0  (type-3, lzReceive 120,000 gas)
+       eid 30101, msg_type 1 (SEND), options 0x0003010011010000000000000000000000000001d4c0  (22 bytes: 0003 | 01 | 0011 | 01 | uint128 120000)
+         as u8 vector: [0,3,1,0,17,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,212,192]
+         (150k = 0x000301001101000000000000000000000000000249f0, 200k = 0x00030100110100000000000000000000000000030d40)
      e.g. sui client call --package 0xfdc28afc0110cb2edb94e3e57f2b1ce69b5a99c503b06d15e51cfa212de56e24 --module oapp \
-            --function set_enforced_options --args 0xe8a26b0b…029f 0x429cd02c…d662 30101 1 0x0003010011010000…01d4c0 --gas-budget 20000000
+            --function set_enforced_options --args 0xe8a26b0ba4f665eb7f1bc1996ed9b93892bc9ed67013321b5b71de1f89b7029f \
+            0x429cd02c7835a791701a612924b6d6788235a05e5a83de3032ac2dddba8cd662 30101 1 \
+            0x0003010011010000000000000000000000000001d4c0 --gas-budget 20000000
+     Fordefi: Move call, package/module/function as above, type args none, args [OApp object (shared, mutable),
+     AdminCap object (owned by the admin), u32 30101, u16 1, vector<u8> = the 22 bytes above]. Sanity check: the
+     payload must be exactly 22 bytes; the Ethereum zkSync batch (nonce 37) uses the identical bytes.
      Enforced options are merged with the sender's extraOptions (65k + 120k = 185k), so front-ends need no change.
      Verify with get_enforced_options(OApp, 30101, 1) or by re-reading the enforced_options table 0x5c3415e9…5c7b.
   Optional symmetric hardening: ETH sUSN setEnforcedOptions(30378, 1, lzReceive 500k) so ETH->Sui does not depend on the
