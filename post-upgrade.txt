@@ -1,0 +1,102 @@
+POST-UPGRADE SANITY CHECK — bridge-rate-limiter-v1 rollout
+Generated 2026-10-02 from context.txt (plan), msg.txt (signing sequence) and log.txt (execution log),
+plus a fresh on-chain sweep (scripts/verify-rollout.ts) at generation time.
+
+=====================================================================
+1. VERDICT
+=====================================================================
+Every Safe transaction in the plan (steps 1-3, 15 items on 6 chains) plus the Sui admin call is executed,
+and each one is verified on-chain. Live sweep at generation time: 151 PASS, 4 FAIL. The 4 FAILs are the
+Sophon-side LayerZero peers (step 4a), which are deliberately not signed yet. Nothing executed deviates
+from the plan. The only thing not yet proven by a real message is end-to-end delivery after the upgrade:
+the smoke test script exists (scripts/lz/test-bridge.ts) but has not been broadcast.
+
+=====================================================================
+2. FILE CONSISTENCY (msg.txt x log.txt x context.txt)
+=====================================================================
+15 items are marked DONE in msg.txt; all 15 have a log.txt entry with the same tx hash and are ticked [x]
+in context.txt section 0. No item is marked done anywhere without an on-chain tx. Items done outside the
+Safe queues (Sui enforced options, role grant/renounce on Base/Bera/Citrea, Flare peers) are in log.txt
+and context.txt and are referenced in msg.txt step 1b.
+
+step | chain    | nonce | what                                                        | executed (UTC)     | tx
+-----+----------+-------+-------------------------------------------------------------+--------------------+------------------------------------------------------------------
+1a   | zkSync   | 37    | upgrade USN + sUSN, wire limiter, enforced 120k toward ETH  | 2026-10-01 10:57   | 0x9ce950f66d596811903c5c67877e403d5815d27fd096cc2895e97069f8143246
+1b   | Sui      | —     | set_enforced_options(30101, SEND, 120k) via Fordefi          | 2026-10-01 09:41   | DZGHLitC8RuFnYZT1QNTR3wzs7AiBUs2DwSicXpMuJJP
+2a   | Ethereum | 346   | executeUpgrade USN + sUSN, wire limiter                      | 2026-10-01 17:48   | 0xbbfd32feab45ce510cbc789d156e286ce67e956e0deb5da8680dfb5938bc305d
+2b   | Base     | 5     | executeUpgrade sUSN, wire limiter                            | 2026-10-01 18:05   | 0x5a78b821c27f75291c2557b99b95beabe9c570a76c28cd0910893d84c90e480a
+2c   | Bera     | 4     | executeUpgrade sUSN, wire limiter                            | 2026-10-01 11:52   | 0xd4c7c62a1d195ceac55be6e7679da7719c7c73dd0a4c3a2d8a3bba20ac97ea1b (with 3g)
+2d   | HyperEVM | 4     | executeUpgrade sUSN, wire limiter                            | 2026-10-01 11:22   | 0xb74fafce9c8a1318acd5763deb94b36fa82477a5ce9d79232ada41b7b75bd867
+2e   | Citrea   | 4     | executeUpgrade sUSN, wire limiter                            | 2026-10-01 11:51   | 0x42a7865f526fb65d84c799a3cb205612f564f0f88182f91368a67b593019a40a (with 3i)
+3a   | Ethereum | 347   | rate limits 4M/8h, TAC+Sophon 1 wei + dEaD                   | 2026-10-01 17:50   | 0xd4391fa29231f3ce57133ce48be697a7e9cb2adf8f70434a8e37bf6f39fa36ee
+3b   | Ethereum | 348   | USN DVN config = sUSN toward zkSync                          | 2026-10-01 17:55   | 0xb5d86af5964c16f44d9e69a37b9fcc12a84a5999d3a76277379d4dce33d36120
+3c   | zkSync   | 38    | rate limits 4M/8h, TAC+Sophon 1 wei + dEaD                   | 2026-10-01 17:03   | 0x611c544f6c67e66954b3dc440c8b28e34afdae914b815fbae54780cc0a7b8e9e
+3d   | zkSync   | 39    | USN DVN config = sUSN toward Ethereum                        | 2026-10-01 17:56   | 0xabd03aedf642272f42cf0124022f2930d289fc7edb527e318054e2d47d20c2f5
+3e   | zkSync   | 40    | skip USN inbound nonces 139 + 140                            | 2026-10-01 18:01   | 0xd2579e1955d403f46412040096f426e289d6b72fa829b3feacc523acdfab5ed8
+3f   | Base     | 6     | rate limits 4M/8h, TAC+Sophon 1 wei + dEaD                   | 2026-10-01 18:14   | 0x3650315dcf038f11524903a0ab2ade7eabbe56784e32ab33b93f2f96f053f342
+3g   | Bera     | 5     | rate limits 4M/8h                                            | 2026-10-01 11:52   | (same tx as 2c)
+3h   | HyperEVM | 5     | rate limits 4M/8h, TAC+Sophon 1 wei + dEaD                   | 2026-10-01 11:42   | 0x8f4b250ccfb3196e8356b4a007d7f9128044c4c7f5402a4fb8ba23b17f9dbd42
+3i   | Citrea   | 5     | rate limits 4M/8h                                            | 2026-10-01 11:51   | (same tx as 2e)
+
+Ordering constraints honoured: 1a (10:57) and 1b (09:41) both preceded 2a (17:48). 3c (38) preceded 3d (39)
+preceded 3e (40). Every Safe executed strictly in nonce order (Safe nonces now: ETH 349, zkSync 41, Base 7,
+HyperEVM 6, Citrea 6, Bera 6).
+
+=====================================================================
+3. ON-CHAIN STATE CHECKS (from log.txt entries, re-confirmed by the sweep)
+=====================================================================
+Per proxy (ETH USN, ETH sUSN, zkSync USN, zkSync sUSN, Base sUSN, HyperEVM sUSN, Citrea sUSN, Bera sUSN):
+  [x] implementation == audited implementation (addresses.md); Upgraded events in the execution txs
+  [x] rateLimiter() == the chain's BridgeRateLimiter; limiter owner == chain Safe; pendingOwner 0
+  [x] paused() == false (zkSync USN has no pause by design; HyperEVM sUSN gained pause, starts false)
+  [x] totalSupply unchanged by the upgrade (ETH USN 38,430,525.59; ETH sUSN 29,278,390.60 with totalAssets 35,901,636.60 USN;
+      zkSync USN 30,520.12; zkSync sUSN 904.47; HyperEVM 785,659.47; Bera 1,007,004.90; Citrea 0.00191; Base unchanged)
+  [x] name / symbol / decimals / owner / mailbox / hyperlaneEnabled / live remote tokens / LZ peers unchanged
+  [x] every upgrade call carried data = 0x (no initializer); storage layouts prefix-compatible (zkSync + HyperEVM re-proven from
+      verified sources, others previously); the 5 removed vault wrappers are absent from the ETH sUSN impl
+  [x] all 6 timelock operations consumed (scheduledAt == 0); zkSync upgraded directly (no timelock, step 5c pending)
+Rate limits:
+  [x] every live route in + out == 4,000,000 / 28,800 s on every chain (ETH 30 buckets, zkSync 24, Base 10, HyperEVM 12, Citrea 2, Bera 2)
+  [x] TAC 239 + Sophon 50104 == 1 wei in + out and remoteTokens == 0x…dEaD on ETH, zkSync, Base, HyperEVM
+  [x] behaviour probed by eth_call as the mailbox on every chain: unregistered origin -> InvalidRemoteToken; old TAC / Sophon senders ->
+      InvalidRemoteToken; 1 wei from a live origin passes; 4M + 1 wei reverts (rate limit)
+  [x] Bera real delivery (0.01 sUSN, 15:42 UTC) recorded in the inbound bucket (raw storage); refill is limit/window ≈ 139 sUSN/s
+LayerZero:
+  [x] zkSync USN + sUSN enforce lzReceive 120k toward ETH; Sui sUSN OApp enforces 120k toward ETH (table entry verified)
+  [x] two pre-upgrade deliveries into ETH (zkSync 11:15, Sui 10:15) already carried 185k = 120k enforced + 65k sender -> enforced options effective
+  [x] USN send/recv ULN toward zkSync == sUSN (Horizen, Frax, LayerZero Labs, 3 required, conf 15); same on zkSync toward ETH
+  [x] USN ETH->zkSync channel in sync at 140/140 after the skips; sUSN 46/46 and 50/50; USN zkSync->ETH 119/119; sUSN Sui->ETH 11/11
+Roles:
+  [x] Base / HyperEVM / Bera / Citrea sUSN: DEFAULT_ADMIN + BLACKLIST_MANAGER = Safe only, deployer renounced (6 revoke txs)
+  [x] ETH sUSN DEFAULT_ADMIN = Safe only; ETH USN owner = Safe, sole minter = MinterHandlerV2
+  [ ] ETH sUSN REBASE_MANAGER still held by deployer + delegate EOA (audit 4b-5, not part of this rollout)
+Deprecated chains:
+  [x] Flare peers zeroed (2 txs); TAC + Sophon Hyperlane routes closed at our end on 4 chains
+  [ ] Sophon-side LZ peers still set (step 4a, raw signing, held on purpose)
+
+=====================================================================
+4. WHAT IS STILL OPEN (from context.txt section 0 and audit-2026-10-01.md)
+=====================================================================
+Rollout tail:
+  - Smoke tests not yet run: ROUTE=usn-eth-zksync BROADCAST=true npx hardhat run scripts/lz/test-bridge.ts
+                             ROUTE=susn-zksync-eth AMOUNT=0.005 BROADCAST=true npx hardhat run scripts/lz/test-bridge.ts
+    (both dry-run clean: peers, buckets, channels in sync, fees quoted). A DELIVERED in each direction is the last proof.
+  - 4a Sophon peers (raw signing) — after deciding the 229.70 USN Sophon->ETH recovery (4b-2), since the on-chain recovery needs the peer.
+Money owed to users (not fixed by any tx):
+  - 50,000 USN to 0x95780F943b6361FB11eEd893cf1237Dd9B3F54AF and 0.02 USN to 0x8b937c5395D95a8c8948C7C5B844e1541798d90C (skipped zkSync nonces)
+  - 229.70 USN to 0x000002c34bAE6DD7BeC72AcbA6aAAC1e01A359De (Sophon->ETH nonce 249): recover on-chain before 4a, or refund
+  - TAC (3,882 USN + 536 sUSN) and Sophon (8,265 USN + 147 sUSN) holders: routes are now closed at our end — front-end block,
+    announcement and make-whole plan (4b-1); Starknet still enrolls TAC/Sophon (4b-4)
+Security follow-ups (audit): 4b-3 TAC/Sophon ProxyAdmins -> Safes; 4b-4 Starknet unenroll + multisig; 4b-5 REBASE_MANAGER revoke;
+  4b-6 ETH enforced options toward zkSync/Sui; 4b-7 HyperEVM Starknet dEaD; 4b-8 + 5c zkSync timelock batch (+ blacklist role, pin libs);
+  4b-9 Safe signer diversification; 4b-10 ETH hot keys; 4b-11 Sophon sUSN roles + fund deployer on Citrea; 4b-12 HyperEVM timelock 48h;
+  5a Sui limiter 1M vs 4M; 5b Sui multisig; 5d/5e front-end; 5f docs + Hashlock statuses; 5g push branch, npm ci.
+
+=====================================================================
+5. KNOWN CAVEATS
+=====================================================================
+  - Safe Transaction Service intermittently returns 403 for the current egress IP; Base execution hashes were taken from the Safe's
+    on-chain ExecutionSuccess events, every other hash from the service or the explorer link the signer provided.
+  - The log entry for Ethereum originally said two deliveries "succeeded after the upgrade"; corrected — they were just before it,
+    but already carried the 185k gas, which is the evidence that matters.
+  - A Hyperlane message whose sender were literally 0x…dEaD on TAC/Sophon would be accepted up to 1 wei; unreachable in practice.
