@@ -2,9 +2,22 @@ EXECUTION LOG — bridge-rate-limiter upgrade rollout
 (what was actually executed, in order, with on-chain verification; the plan is msg.txt / context.txt section 0)
 
 ---------------------------------------------------------------------
-2026-09-30 19:27–19:28 UTC  Base / Bera / Citrea — deployer EOA renounced DEFAULT_ADMIN + BLACKLIST_MANAGER on the sUSN receivers
-  (after granting them to the Safes earlier the same day; tx hashes in context.txt section 3)
-  Verified: hasRole(deployer) = false on all three; Safe holds both roles; pause() simulates from each Safe.
+2026-09-30 (block time)  Base / Bera / Citrea — deployer EOA granted DEFAULT_ADMIN + BLACKLIST_MANAGER on the sUSN receivers to the chain Safes (scripts/transfer-roles-to-safe.ts)
+  Base   0x34a2…999F  admin 0xfe3ce35a52a6b14599cf6200c8d8740728ba6582f6d25db2c695a04ded36fbcc  blacklist 0x5c177783e9b40759f17ce049d5b59011e9df6dcac461dd9728150080f40ad408
+  Bera   0xdA67…c1eD  admin 0xfe574cc8b03bc449fb8dedcd4767aef521211c3ee4b392f7418bda0b1bfe0e18  blacklist 0x71e216752e7c405d2fdb35263c01fded3a1a930d8bd3c25187e0c394a017f29c
+  Citrea 0xdA67…c1eD  admin 0x0f38b32409d8ab95306ed681ec96a3b08f30770a4eef8d4c835ac411c5ebb01e  blacklist 0x0ab76b9bdd4ad8680486e06ab39498b43f662d4f78427d86f625cac4b10854df
+  Verified: all six receipts status 1 with RoleGranted(role, Safe); pause() simulates from each Safe.
+
+2026-09-30 19:27–19:28 UTC  Base / Bera / Citrea — deployer EOA renounced both roles (RENOUNCE=true run)
+  Base   0xbb193885b6a7fbeb56b3fb99d89851c3534c3216d8a392609e598f682d7aca86 (admin)  0xd3e014a69d8b0d6556aec009bff79b7c5f89df7cf8fec581c42c7d77bac8fc4a (blacklist)
+  Bera   0x67cd795bbe431f4412e4c93f68f3bb6d3b6ee4ca36ddb7040500c6bfbfe83c29 (admin)  0xd4d5c1e1260f7c21b2f929613168e47d0c6e20dff9b90df96db7896974d16ec7 (blacklist)
+  Citrea 0x906dfd21610a6d91b904780f22f31496b9bab2832a1070e2bd9564d82b723bb5 (admin)  0xb4cd9fcdb96fff216fe15f16a93b4b3168bec266a758632806c0c0db7c15c081 (blacklist)
+  Verified: RoleRevoked(role, deployer) events; hasRole(deployer) = false on all three; Safe-only admin + blacklist on Base, HyperEVM, Bera, Citrea.
+
+2026-10-01  [Flare] deployer EOA zeroed the LayerZero peers to Ethereum on both Flare OFTs (scripts/close-sophon-flare-peers.ts BROADCAST=true)
+  sUSN 0xF98AF70f…8A41 setPeer(30101, 0)  tx 0xbb73382601d012d4c70e921b638dd55f64c1dff62f445d479050b9f6107828fa
+  USN  0x6086d52F…C2Bd setPeer(30101, 0)  tx 0x2e2f7c924487f40342e1e109792381ba4e58c71b6e9d5a76107127dccc863522
+  Verified: peers(30101) = 0 on both.
 
 2026-10-01 09:41 UTC  [Sui] 1b  oapp::set_enforced_options(OApp, AdminCap, 30101, 1, lzReceive 120k)   — admin key via Fordefi
   tx  DZGHLitC8RuFnYZT1QNTR3wzs7AiBUs2DwSicXpMuJJP
