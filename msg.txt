@@ -27,7 +27,8 @@ https://app.safe.global/transactions/tx?safe=base:0xf56d33ef52642ce226A566610A97
 [Bera] 2c. Execute upgrade sUSN, wire limiter (nonce 4)
 https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA7c9bB2038eF9a3C58&id=multisig_0x94E9f383b085D32973634EA7c9bB2038eF9a3C58_0xfc4da63324b00f9931e440bfc288fc68820e3e20a1d58ad7e804c7cdd58a571f
 
-[HyperEVM] 2d. Execute upgrade sUSN, wire limiter (nonce 4) — 1/3 signed
+[HyperEVM] 2d. DONE 2026-10-01 11:22 UTC — https://hyperevmscan.io/tx/0xb74fafce9c8a1318acd5763deb94b36fa82477a5ce9d79232ada41b7b75bd867
+Execute upgrade sUSN, wire limiter (nonce 4)
 https://app.safe.global/transactions/tx?safe=hyper-evm:0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8&id=multisig_0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8_0x84e38af23fb035ea08d55795cb09a9998ea9259af1671cd2c19b319f668c7d9d
 
 [Citrea] 2e. Execute upgrade sUSN, wire limiter (nonce 4) — 1/3 signed

@@ -21,3 +21,13 @@ EXECUTION LOG — bridge-rate-limiter upgrade rollout
 
 ---------------------------------------------------------------------
 NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 · 2e Citrea 4 · then step 3 config txs · 4a Sophon peers (after the 229.70 USN recovery).
+
+2026-10-01 11:22:00 UTC  [HyperEVM] 2d  Safe nonce 4 — executeUpgrade sUSN via Timelock (24h, matured 09-29) + setRateLimiter
+  tx  https://hyperevmscan.io/tx/0xb74fafce9c8a1318acd5763deb94b36fa82477a5ce9d79232ada41b7b75bd867
+  safeTxHash 0x84e38af23fb035ea08d55795cb09a9998ea9259af1671cd2c19b319f668c7d9d — Upgraded(0xffC95e7E…6227), gas 125,790
+  Verified on-chain after execution (vs pre-upgrade snapshot):
+    sUSN 0x34a2…999F  impl 0xffC95e7E447DC94DcE706B8afda751349E676227 (audited, byte-identical to Base's build) | rateLimiter 0x7704…2Ef2 | paused false (new)
+    totalSupply 785,659.471232334458891162 unchanged | name/symbol/decimals unchanged | owner Safe | mailbox canonical | hyperlaneEnabled true
+    remoteTokens(1, 324, 8453, 239, 50104, 358974494) unchanged | Safe holds DEFAULT_ADMIN + BLACKLIST_MANAGER
+    limiter buckets still 0 (= unlimited) until nonce 5 | Safe nonce now 5 | timelock op 0xf5ffefdf… consumed (scheduledAt = 0)
+    handle(): unregistered origin reverts InvalidRemoteToken (L-04 active); registered ETH origin simulates through the limiter; non-mailbox caller reverts

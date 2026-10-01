@@ -21,7 +21,8 @@ zkSync the config txs cannot run before the upgrade tx.
    [ ] 2a  Ethereum nonce 346   executeUpgrade USN + sUSN + setRateLimiter x2          0/3   (after 1a AND 1b)
    [ ] 2b  Base     nonce 5     executeUpgrade sUSN + setRateLimiter                   0/3
    [ ] 2c  Bera     nonce 4     executeUpgrade sUSN + setRateLimiter                   0/3
-   [ ] 2d  HyperEVM nonce 4     executeUpgrade sUSN + setRateLimiter                   1/3   https://app.safe.global/transactions/queue?safe=hyper-evm:0x3D6B…C5b8
+   [x] 2d  DONE 2026-10-01 11:22 UTC — HyperEVM nonce 4 executed, tx 0xb74fafce9c8a1318acd5763deb94b36fa82477a5ce9d79232ada41b7b75bd867
+           sUSN impl 0xffC9…6227, limiter wired, paused false, supply/remote tokens/roles unchanged (log.txt).
    [ ] 2e  Citrea   nonce 4     executeUpgrade sUSN + setRateLimiter                   1/3   https://safe.citrea.xyz/transactions/queue?safe=citrea-mainnet:0xB2aD…Fc80
        (zkSync's upgrade is 1a itself.)
        After each: rateLimiter() == limiter, paused() == false (zkSync USN has no pause), totalSupply unchanged; `npx hardhat run scripts/propose-upgrade.ts`
