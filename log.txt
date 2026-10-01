@@ -44,3 +44,14 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
     remoteTokens(1, 324, 8453, 239, 50104, 358974494) unchanged | Safe holds DEFAULT_ADMIN + BLACKLIST_MANAGER
     limiter buckets still 0 (= unlimited) until nonce 5 | Safe nonce now 5 | timelock op 0xf5ffefdf… consumed (scheduledAt = 0)
     handle(): unregistered origin reverts InvalidRemoteToken (L-04 active); registered ETH origin simulates through the limiter; non-mailbox caller reverts
+
+2026-10-01 11:42:00 UTC  [HyperEVM] 3h  Safe nonce 5 — rate limits 4M/8h + TAC/Sophon closed (1 wei) + remote tokens 0x…dEaD
+  tx  https://hyperevmscan.io/tx/0x8f4b250ccfb3196e8356b4a007d7f9128044c4c7f5402a4fb8ba23b17f9dbd42
+  safeTxHash 0x8e308ebc326fdb7701d6accc08715d4542f192439041e6b5e21634ab0c147767 — status 1, gas 936,062, Safe nonce now 6
+  Verified on-chain after execution:
+    remoteTokens(239) = 0x…dEaD, remoteTokens(50104) = 0x…dEaD; ETH / zkSync / Base / Starknet remote tokens unchanged
+    limiter buckets (sUSN, Hyperlane): 1, 324, 8453, 358974494 in+out = 4,000,000 / 28,800 s; 239, 50104 in+out = 1 wei — all 12 at target
+    paused false | totalSupply 785,659.471232334458891162 unchanged
+    behaviour (eth_call as the mailbox): delivery from the old TAC sUSN sender reverts InvalidRemoteToken; from ETH 1 wei and exactly 4M pass;
+    4M + 1 wei reverts (rate limit). Note: a message whose sender is literally 0x…dEaD on TAC would pass up to 1 wei — unreachable in practice.
+  HyperEVM is now fully done (2d + 3h). Next on HyperEVM: nothing queued.

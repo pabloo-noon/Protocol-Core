@@ -59,7 +59,8 @@ https://app.safe.global/transactions/tx?safe=base:0xf56d33ef52642ce226A566610A97
 [Bera] 3g. Rate limits 4M/8h (nonce 5)
 https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA7c9bB2038eF9a3C58&id=multisig_0x94E9f383b085D32973634EA7c9bB2038eF9a3C58_0x277dd9b0853fc7c687b70effac9c3c4381c93d098bfd2b7d247b1554622ffd0b
 
-[HyperEVM] 3h. Rate limits 4M/8h, TAC + Sophon closed (nonce 5) — 1/3 signed
+[HyperEVM] 3h. DONE 2026-10-01 11:42 UTC — https://hyperevmscan.io/tx/0x8f4b250ccfb3196e8356b4a007d7f9128044c4c7f5402a4fb8ba23b17f9dbd42
+Rate limits 4M/8h, TAC + Sophon closed (nonce 5)
 https://app.safe.global/transactions/tx?safe=hyper-evm:0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8&id=multisig_0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8_0x8e308ebc326fdb7701d6accc08715d4542f192439041e6b5e21634ab0c147767
 
 [Citrea] 3i. Rate limits 4M/8h (nonce 5) — 1/3 signed

@@ -31,7 +31,8 @@ zkSync the config txs cannot run before the upgrade tx.
  STEP 3 — post-upgrade config (queued directly behind each upgrade, same signers):
    [ ] 3a  Ethereum nonce 347  rate limits 4M/8h all routes + TAC/Sophon closed (1 wei + 0x…dEaD)   0/3
    [ ] 3b  zkSync   nonce 38   same                                                              0/3
-   [ ] 3c  Base nonce 6 · Bera nonce 5 · HyperEVM nonce 5 · Citrea nonce 5  rate limits            0/3 · 0/3 · 1/3 · 1/3
+   [ ] 3c  Base nonce 6 · Bera nonce 5 · Citrea nonce 5  rate limits            0/3 · 0/3 · 1/3
+   [x] 3c' HyperEVM nonce 5 DONE 2026-10-01 11:42 UTC — tx 0x8f4b250ccfb3196e8356b4a007d7f9128044c4c7f5402a4fb8ba23b17f9dbd42 (12 buckets at target, TAC/Sophon dEaD; log.txt)
    [ ] 3d  Ethereum nonce 348  USN DVN config = sUSN (3 required) for eid 30165                     0/3
    [ ] 3e  zkSync   nonce 39   USN DVN config = sUSN (3 required) for eid 30101                     0/3
    [ ] 3f  zkSync   nonce 40   EndpointV2.skip(USN, 30101, ETH USN, 139) + skip(…, 140)                    0/3
