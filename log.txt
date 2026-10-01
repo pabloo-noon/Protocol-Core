@@ -55,3 +55,15 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
     behaviour (eth_call as the mailbox): delivery from the old TAC sUSN sender reverts InvalidRemoteToken; from ETH 1 wei and exactly 4M pass;
     4M + 1 wei reverts (rate limit). Note: a message whose sender is literally 0x…dEaD on TAC would pass up to 1 wei — unreachable in practice.
   HyperEVM is now fully done (2d + 3h). Next on HyperEVM: nothing queued.
+
+2026-10-01 11:51:17 UTC  [Citrea] 2e + 3i  Safe nonces 4 and 5 executed together in one on-chain tx (Safe UI batch execution)
+  tx  https://explorer.mainnet.citrea.xyz/tx/0x42a7865f526fb65d84c799a3cb205612f564f0f88182f91368a67b593019a40a   status 1, gas 316,130, 3/3 confirmations each
+  nonce 4  safeTxHash 0x152a0bf41ddf58fa2e14704f822672e6477d5a4b2ed4b5957e8b1ed085db7724 — executeUpgrade sUSN via Timelock (48h, matured 09-30) + setRateLimiter
+  nonce 5  safeTxHash 0x857c682bc5c24706b7a390ead488a7d9a31500b098d091b7c4d10e76cce17e82 — rate limits 4M/8h ETH route in+out
+  Verified on-chain after execution:
+    sUSN 0xdA67…c1eD  impl 0x6D1019bdbe1Da163134Aba821bBfc1cCAEb988a8 (audited) | rateLimiter 0xC79A…E815 | paused false
+    name/symbol/decimals unchanged | totalSupply 0.00191 sUSN unchanged | owner Safe | mailbox canonical | hyperlaneEnabled true | remoteTokens(1) = ETH sUSN (only route)
+    Safe holds DEFAULT_ADMIN + BLACKLIST_MANAGER, deployer none | timelock op 0x0b12851d… consumed (scheduledAt = 0) | Safe nonce now 6
+    limiter HL 1 in + out = 4,000,000 / 28,800 s
+    behaviour (eth_call as the mailbox): unregistered origin reverts InvalidRemoteToken; ETH 1 wei passes; ETH 4M + 1 wei reverts (rate limit)
+  Citrea is now fully done (2e + 3i).

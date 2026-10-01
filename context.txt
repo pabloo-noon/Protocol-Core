@@ -23,7 +23,8 @@ zkSync the config txs cannot run before the upgrade tx.
    [ ] 2c  Bera     nonce 4     executeUpgrade sUSN + setRateLimiter                   0/3
    [x] 2d  DONE 2026-10-01 11:22 UTC — HyperEVM nonce 4 executed, tx 0xb74fafce9c8a1318acd5763deb94b36fa82477a5ce9d79232ada41b7b75bd867
            sUSN impl 0xffC9…6227, limiter wired, paused false, supply/remote tokens/roles unchanged (log.txt).
-   [ ] 2e  Citrea   nonce 4     executeUpgrade sUSN + setRateLimiter                   1/3   https://safe.citrea.xyz/transactions/queue?safe=citrea-mainnet:0xB2aD…Fc80
+   [x] 2e  DONE 2026-10-01 11:51 UTC — Citrea nonce 4 executed, tx 0x42a7865f526fb65d84c799a3cb205612f564f0f88182f91368a67b593019a40a (with nonce 5)
+           sUSN impl 0x6D10…88a8, limiter wired, paused false, supply/roles unchanged (log.txt).
        (zkSync's upgrade is 1a itself.)
        After each: rateLimiter() == limiter, paused() == false (zkSync USN has no pause), totalSupply unchanged; `npx hardhat run scripts/propose-upgrade.ts`
        prints "already on <impl>". Then send a tiny test transfer per route (scripts/lz/test-send-*.ts, Hyperlane via the UI).
@@ -31,7 +32,8 @@ zkSync the config txs cannot run before the upgrade tx.
  STEP 3 — post-upgrade config (queued directly behind each upgrade, same signers):
    [ ] 3a  Ethereum nonce 347  rate limits 4M/8h all routes + TAC/Sophon closed (1 wei + 0x…dEaD)   0/3
    [ ] 3b  zkSync   nonce 38   same                                                              0/3
-   [ ] 3c  Base nonce 6 · Bera nonce 5 · Citrea nonce 5  rate limits            0/3 · 0/3 · 1/3
+   [ ] 3c  Base nonce 6 · Bera nonce 5  rate limits            0/3 · 0/3
+   [x] 3c'' Citrea nonce 5 DONE 2026-10-01 11:51 UTC — same tx as 2e (ETH route in+out 4M/8h; log.txt)
    [x] 3c' HyperEVM nonce 5 DONE 2026-10-01 11:42 UTC — tx 0x8f4b250ccfb3196e8356b4a007d7f9128044c4c7f5402a4fb8ba23b17f9dbd42 (12 buckets at target, TAC/Sophon dEaD; log.txt)
    [ ] 3d  Ethereum nonce 348  USN DVN config = sUSN (3 required) for eid 30165                     0/3
    [ ] 3e  zkSync   nonce 39   USN DVN config = sUSN (3 required) for eid 30101                     0/3

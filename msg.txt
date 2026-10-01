@@ -31,7 +31,8 @@ https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA
 Execute upgrade sUSN, wire limiter (nonce 4)
 https://app.safe.global/transactions/tx?safe=hyper-evm:0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8&id=multisig_0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8_0x84e38af23fb035ea08d55795cb09a9998ea9259af1671cd2c19b319f668c7d9d
 
-[Citrea] 2e. Execute upgrade sUSN, wire limiter (nonce 4) — 1/3 signed
+[Citrea] 2e. DONE 2026-10-01 11:51 UTC — https://explorer.mainnet.citrea.xyz/tx/0x42a7865f526fb65d84c799a3cb205612f564f0f88182f91368a67b593019a40a (same on-chain tx as 3i)
+Execute upgrade sUSN, wire limiter (nonce 4)
 https://safe.citrea.xyz/transactions/tx?safe=citrea-mainnet:0xB2aD758Ee2710527A28d906F9588938c2e5cFc80&id=multisig_0xB2aD758Ee2710527A28d906F9588938c2e5cFc80_0x152a0bf41ddf58fa2e14704f822672e6477d5a4b2ed4b5957e8b1ed085db7724
 
 =====================================================================
@@ -63,7 +64,8 @@ https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA
 Rate limits 4M/8h, TAC + Sophon closed (nonce 5)
 https://app.safe.global/transactions/tx?safe=hyper-evm:0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8&id=multisig_0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8_0x8e308ebc326fdb7701d6accc08715d4542f192439041e6b5e21634ab0c147767
 
-[Citrea] 3i. Rate limits 4M/8h (nonce 5) — 1/3 signed
+[Citrea] 3i. DONE 2026-10-01 11:51 UTC — https://explorer.mainnet.citrea.xyz/tx/0x42a7865f526fb65d84c799a3cb205612f564f0f88182f91368a67b593019a40a (same on-chain tx as 2e)
+Rate limits 4M/8h (nonce 5)
 https://safe.citrea.xyz/transactions/tx?safe=citrea-mainnet:0xB2aD758Ee2710527A28d906F9588938c2e5cFc80&id=multisig_0xB2aD758Ee2710527A28d906F9588938c2e5cFc80_0x857c682bc5c24706b7a390ead488a7d9a31500b098d091b7c4d10e76cce17e82
 
 =====================================================================
