@@ -100,3 +100,30 @@ Security follow-ups (audit): 4b-3 TAC/Sophon ProxyAdmins -> Safes; 4b-4 Starknet
   - The log entry for Ethereum originally said two deliveries "succeeded after the upgrade"; corrected — they were just before it,
     but already carried the 185k gas, which is the evidence that matters.
   - A Hyperlane message whose sender were literally 0x…dEaD on TAC/Sophon would be accepted up to 1 wei; unreachable in practice.
+
+=====================================================================
+6. RAW STORAGE-SLOT SANITY CHECK (scripts/storage-sanity.ts, run 2026-10-02)
+=====================================================================
+Method: for each of the 8 proxies, every known slot is read at the block just before the chain's upgrade tx
+and at the latest block, decoded, and compared to the live getter. Slots covered per proxy: EIP-1967
+implementation + admin; every sequential variable of the implementation (layouts computed with solc 0.8.28
+from the repo build-info); remoteTokens(domain) for all 9 domains; ERC-7201 namespaced storage: ERC20
+(_totalSupply, _name, _symbol), Ownable (_owner), Ownable2Step (_pendingOwner), AccessControl
+(DEFAULT_ADMIN hasRole for Safe and deployer), Initializable (_initialized/_initializing), Pausable (_paused),
+ERC4626 (_asset/_underlyingDecimals, vault only), ReentrancyGuard (_status), and on the LayerZero OApps
+OAppCore peers(30101/30165/30378), OptionsType3 enforcedOptions(eid, SEND), OFTCore msgInspector, PreCrime.
+
+Result: 202 decoded-slot-vs-getter and invariant checks PASS, 0 FAIL on all 8 proxies.
+  - every raw slot decodes to exactly what the getter returns (no slot shift, no reinterpretation)
+  - Initializable: every proxy _initialized = 1 and not initializing; every implementation = uint64.max (disabled)
+  - implementation slot = audited impl; rateLimiter byte range of the packed slot = the chain's limiter
+
+Before/after diff (7 proxies with archive reads; HyperEVM's RPC is not an archive node, so only its live
+checks apply): 30 slot changes, all expected, 0 unexpected:
+  - eip1967.implementation old -> new on every proxy
+  - packed slot hyperlaneEnabled+rateLimiter: 0x0 -> limiter address on every proxy (hyperlaneEnabled byte untouched)
+  - remoteTokens(239) and (50104): old TAC/Sophon token -> 0x…dEaD on ETH USN, ETH sUSN, zkSync USN, zkSync sUSN, Base (and HyperEVM, live)
+  - enforcedOptions(30101, SEND) on zkSync USN and sUSN: 65,000 -> 120,000
+  - ERC20._totalSupply drifted slightly on ETH USN, zkSync USN/sUSN and Bera (normal bridge traffic between the two blocks)
+Everything else is byte-identical before and after: mailbox, ISM, live remote tokens, admin/permissionless (ETH USN),
+__gap region (vault), name/symbol, owner/pendingOwner, roles, paused, asset, peers, other enforced options, msgInspector, preCrime.
