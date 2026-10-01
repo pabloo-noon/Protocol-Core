@@ -50,11 +50,37 @@ zkSync the config txs cannot run before the upgrade tx.
    [x] 4b  Flare peers zeroed 2026-10-01 (txs in section 5)
    [ ] 4c  TAC: nothing to sign — its Hyperlane routes die when 3a/3b register 0x…dEaD on ETH/zkSync/Base/HyperEVM
 
+ STEP 4b — found by the 2026-10-01 full audit (audit-2026-10-01.md), NOT covered by any queued tx:
+   [ ] 4b-1 BEFORE the dEaD batches (ETH 347 / zkSync 38 / Base 6 / HyperEVM 5): front-end block + announcement for TAC and
+            Sophon, and a make-whole plan for the supply left there (TAC 3,882 USN + 536 sUSN; Sophon 8,265 USN + 147 sUSN).
+            After those batches, anything bridged FROM TAC/Sophon burns at source. TAC->ETH had 21 msgs in the last 90 days.
+   [ ] 4b-2 BEFORE Sophon peers are zeroed (4a): recover 229.70 USN stuck Sophon->ETH LZ nonce 249 (sender 0x000002c3…59De,
+            2026-08-26; LZ Labs verified, Nethermind waiting, ETH peer cleared 08-29) — ETH Safe batch: USN recv ULN 30334 ->
+            required [LZ Labs] + setPeer(30334, Sophon USN) -> permissionless commitVerification + lzReceive -> setPeer(30334, 0);
+            or refund off-chain.
+   [ ] 4b-3 Transfer the deployer-owned ProxyAdmins to the chain Safes: TAC USN 0xF405…2Bbe, TAC sUSN 0x3684…cFc7, Sophon sUSN
+            0x90D0…9D5f (deployer EOA tx each; single-step Ownable, double-check the Safe address).
+   [ ] 4b-4 Starknet routers (USN 0x01e6…135b, sUSN 0x0241…4d17, owner = single-key Braavos 0x25beda…3072):
+            unenroll_remote_router(239) + (50104) on both — otherwise TAC/Sophon->Starknet->ETH stays open — then transfer_ownership
+            to a Starknet multisig.
+   [ ] 4b-5 ETH Safe: revokeRole(REBASE_MANAGER_ROLE, deployer 0x1738…D699) + revokeRole(REBASE_MANAGER_ROLE, 0xcC24…b11f) on sUSN.
+   [ ] 4b-6 ETH Safe: setEnforcedOptions USN + sUSN (30165, SEND, 120k) and sUSN (30378, SEND, 500k) so delivery no longer
+            depends on the front-end's extraOptions.
+   [ ] 4b-7 HyperEVM Safe: registerHyperlaneRemoteToken(358974494, 0x…dEaD) on sUSN (Starknet does not enroll HyperEVM) — or enroll it on Starknet.
+   [ ] 4b-8 Fold into 5c (zkSync timelock batch): grantRole(BLACKLIST_MANAGER_ROLE, Safe) on USN + sUSN (held by nobody today),
+            setSendLibrary/setReceiveLibrary -> ULN302 for both (currently default-lib).
+   [ ] 4b-9 Safe signer diversification: 0xe45B…42D0 + 0x09CE…3799 are on all 8 Safes; with 0x7b11…be37 or 0x8B36…aD01 three keys
+            clear threshold everywhere. Add chain-unique signers on Ethereum and zkSync; consider a guard on Ethereum.
+   [ ] 4b-10 Hot keys on Ethereum: MINTER_ROLE EOA 0x3769…76AE (MinterHandlerV2), treasury = sole APPROVER EOA 0xFeD8…f14E
+            (RedeemHandlerV2). Policy/HSM check, split approver from treasury.
+   [ ] 4b-11 Sophon sUSN: grant DEFAULT_ADMIN + BLACKLIST to the Sophon Safe then renounce the deployer. Fund the deployer on Citrea.
+   [ ] 4b-12 HyperEVM timelock setDelay(48h) (currently 24h) after its pending op executes.
+
  STEP 5 — decisions / DD follow-ups:
    [ ] 5a  Sui rate limit: Sui side is 1M/8h both ways, ETH side will be 4M/8h -> effective 1M/8h. Raise Sui to 4M
            (oft::set_rate_limit, section 6) or lower the ETH 30378 buckets to 1M. Decide and execute.
    [ ] 5b  Sui admin is a single ed25519 key holding AdminCap + MigrationCap + UpgradeCap -> move to a Sui multisig.
-   [ ] 5b' Base (0x34a2…999F) + Bera + Citrea (0xdA67…c1eD) sUSN receivers: DEFAULT_ADMIN_ROLE and BLACKLIST_MANAGER_ROLE were held
+   [x] 5b' DONE (grant 2026-10-01, renounce 2026-09-30 19:27 UTC block time; tx hashes in section 3). Base (0x34a2…999F) + Bera + Citrea (0xdA67…c1eD) sUSN receivers: DEFAULT_ADMIN_ROLE and BLACKLIST_MANAGER_ROLE were held
            by the deployer EOA 0x1738…D699 only; the chain Safes held NO role, so they could neither pause (pause() is
            onlyRole(DEFAULT_ADMIN_ROLE), there is no separate PAUSER_ROLE) nor blacklist. HyperEVM is correct (Safe holds both, deployer none).
            scripts/transfer-roles-to-safe.ts: grantRole(both, Safe) from the deployer [done 2026-10-01, tx hashes in section 3],
@@ -143,7 +169,11 @@ sUSN receiver roles granted to the Safes (deployer EOA 0x1738…D699 -> Safe, re
                       BLACKLIST_MGR https://berascan.com/tx/0x71e216752e7c405d2fdb35263c01fded3a1a930d8bd3c25187e0c394a017f29c
   Citrea 0xdA67…c1eD  DEFAULT_ADMIN https://explorer.mainnet.citrea.xyz/tx/0x0f38b32409d8ab95306ed681ec96a3b08f30770a4eef8d4c835ac411c5ebb01e
                       BLACKLIST_MGR https://explorer.mainnet.citrea.xyz/tx/0x0ab76b9bdd4ad8680486e06ab39498b43f662d4f78427d86f625cac4b10854df
-  Deployer still holds both roles on those 3 chains (renounce pending, step 5b'). HyperEVM already Safe-only.
+  Deployer renounced both roles on the 3 chains 2026-09-30 19:27-19:28 UTC (RENOUNCE=true run):
+    Base   0xbb193885b6a7fbeb56b3fb99d89851c3534c3216d8a392609e598f682d7aca86 (admin)  0xd3e014a69d8b0d6556aec009bff79b7c5f89df7cf8fec581c42c7d77bac8fc4a (blacklist)
+    Bera   0x67cd795bbe431f4412e4c93f68f3bb6d3b6ee4ca36ddb7040500c6bfbfe83c29 (admin)  0xd4d5c1e1260f7c21b2f929613168e47d0c6e20dff9b90df96db7896974d16ec7 (blacklist)
+    Citrea 0x906dfd21610a6d91b904780f22f31496b9bab2832a1070e2bd9564d82b723bb5 (admin)  0xb4cd9fcdb96fff216fe15f16a93b4b3168bec266a758632806c0c0db7c15c081 (blacklist)
+  All four sUSN receivers (Base, HyperEVM, Bera, Citrea) are now Safe-only for admin + blacklist (verify-rollout.ts PASS).
 
 Implementations claimed (initialize() to the Safes), 2026-09-27:
   Base     https://basescan.org/tx/0x66d48faa67826b93263f59e74c9f04f1685b5b65e97f4ba400a91308f0b86216
