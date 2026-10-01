@@ -93,3 +93,29 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
     USN  buckets LZ 30101 / HL 1 / HL 358974494 in+out = 4M / 28,800 s; HL 239 / 50104 in+out = 1 wei; remoteTokens(239|50104) = dEaD
     sUSN buckets LZ 30101 / HL 1 / 999 / 8453 / 358974494 in+out = 4M / 28,800 s; HL 239 / 50104 = 1 wei; remoteTokens(239|50104) = dEaD
     USN DVN config toward ETH still send 2 / recv 1 required (nonce 39 pending); USN inbound nonce from ETH still 138 (nonce 40 pending)
+
+2026-10-01 17:48:47 UTC  [Ethereum] 2a  Safe nonce 346 — executeUpgrade USN + sUSN via Timelock (48h, matured 09-30) + setRateLimiter x2
+  tx  https://etherscan.io/tx/0xbbfd32feab45ce510cbc789d156e286ce67e956e0deb5da8680dfb5938bc305d   status 1, gas 146,210
+  safeTxHash 0x7bd94950f153146b648d51c025ce44f55b56c2e9587c955bed84aada37bb3cb7 — Upgraded(USN -> 0x79FD7FE2…e229), Upgraded(sUSN -> 0xeF2eA425…AB15)
+
+2026-10-01 17:50:47 UTC  [Ethereum] 3a  Safe nonce 347 — rate limits 4M/8h all routes in+out, TAC/Sophon 1 wei + remote tokens 0x…dEaD on USN and sUSN
+  tx  https://etherscan.io/tx/0xd4391fa29231f3ce57133ce48be697a7e9cb2adf8f70434a8e37bf6f39fa36ee   status 1, gas 2,181,046
+  safeTxHash 0xe4a7b195c4b76c3fc9e36767e858d3eb1611bff7e75554706dc29c68cef957c1
+
+2026-10-01 17:55:47 UTC  [Ethereum] 3b  Safe nonce 348 — USN send + receive ULN config toward zkSync = sUSN (Horizen, Frax, LayerZero Labs; 3 required)
+  tx  https://etherscan.io/tx/0xb5d86af5964c16f44d9e69a37b9fcc12a84a5999d3a76277379d4dce33d36120   status 1, gas 230,211
+  safeTxHash 0x67b3f3af5c0178fe392d822aa61138501935c73b470c805f3ef919e2ac38f124 — ETH Safe nonce now 349
+
+2026-10-01 17:56:18 UTC  [zkSync] 3d  Safe nonce 39 — USN send + receive ULN config toward Ethereum = sUSN (Horizen, Frax, LayerZero Labs; 3 required)
+  tx  https://explorer.zksync.io/tx/0xabd03aedf642272f42cf0124022f2930d289fc7edb527e318054e2d47d20c2f5   status 1, gas 323,510
+  safeTxHash 0x5246d296c87e60285461ff524195d81062c6b7daf25356905fd4f8dd37c20bec — zkSync Safe nonce now 40
+
+  Verified on-chain after the four executions (scripts/verify-rollout.ts CHAINS=ethereum,zksync: 88 PASS, 1 FAIL = the known USN inbound gap 138/140 until nonce 40):
+    USN  0xdA67…c1eD  impl 0x79FD7FE2a8EbcAE47798321b2AC97107dF3de229 | rateLimiter 0xe8c9…959F | paused false | totalSupply 38,430,525.59 | owner Safe | admin (sole minter) MinterHandlerV2 0xB91b…c058 | peer(30165) zkSync USN
+    sUSN 0xE24a…B91D  impl 0xeF2eA4250B7CE4D0aA9Ca70607ECeF278C6EAB15 | rateLimiter 0xe8c9…959F | paused false | totalSupply 29,278,390.60 sUSN, totalAssets 35,901,636.60 USN, asset = USN | peers 30165 zkSync sUSN, 30378 Sui
+    the 5 removed vault wrappers (depositWithPermit, *WithSlippageCheck) are absent from the new impl | both timelock ops consumed (scheduledAt = 0)
+    sUSN roles: DEFAULT_ADMIN Safe only; REBASE_MANAGER still Safe + deployer + delegate EOA (audit 4b-5 pending); BLACKLIST_MANAGER nobody
+    limiter: every live route in+out = 4M / 28,800 s on USN (LZ 30165, HL 324, HL 358974494) and sUSN (LZ 30165, LZ 30378, HL 324/8453/999/4114/80094/358974494); HL 239 + 50104 = 1 wei; remoteTokens(239|50104) = dEaD on both
+    DVNs: USN send/recv toward zkSync == sUSN (Horizen 0x3802…, Frax 0x3865…, LZ Labs 0x589d…); zkSync USN send/recv toward ETH == sUSN (Horizen 0x1253…, Frax 0x2Eb8…, LZ Labs 0x620A…)
+    handle(): unregistered origin, old TAC sender and old Sophon sender revert InvalidRemoteToken; zkSync 1 wei and Bera 1 wei pass; zkSync 4M + 1 wei reverts (rate limit)
+    channels: USN inbound from zkSync 119 (was 118), sUSN from zkSync 50, sUSN from Sui 11 (was 10) -> deliveries into Ethereum already succeeded after the upgrade (see next entry)
