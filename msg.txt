@@ -24,7 +24,8 @@ https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a33
 [Base] 2b. Execute upgrade sUSN, wire limiter (nonce 5)
 https://app.safe.global/transactions/tx?safe=base:0xf56d33ef52642ce226A566610A979DC8d954592D&id=multisig_0xf56d33ef52642ce226A566610A979DC8d954592D_0x70f7fcc20b2e090c324850675e70c616b943bce92a04f19700cbca6de0dbe234
 
-[Bera] 2c. Execute upgrade sUSN, wire limiter (nonce 4)
+[Bera] 2c. DONE 2026-10-01 11:52 UTC — https://berascan.com/tx/0xd4c7c62a1d195ceac55be6e7679da7719c7c73dd0a4c3a2d8a3bba20ac97ea1b (same on-chain tx as 3g)
+Execute upgrade sUSN, wire limiter (nonce 4)
 https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA7c9bB2038eF9a3C58&id=multisig_0x94E9f383b085D32973634EA7c9bB2038eF9a3C58_0xfc4da63324b00f9931e440bfc288fc68820e3e20a1d58ad7e804c7cdd58a571f
 
 [HyperEVM] 2d. DONE 2026-10-01 11:22 UTC — https://hyperevmscan.io/tx/0xb74fafce9c8a1318acd5763deb94b36fa82477a5ce9d79232ada41b7b75bd867
@@ -57,7 +58,8 @@ https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b
 [Base] 3f. Rate limits 4M/8h, TAC + Sophon closed (nonce 6)
 https://app.safe.global/transactions/tx?safe=base:0xf56d33ef52642ce226A566610A979DC8d954592D&id=multisig_0xf56d33ef52642ce226A566610A979DC8d954592D_0x6e9f5d7762ee25db64e36a4383ff60ebb512271321e573c1e70cdbe425cfca20
 
-[Bera] 3g. Rate limits 4M/8h (nonce 5)
+[Bera] 3g. DONE 2026-10-01 11:52 UTC — https://berascan.com/tx/0xd4c7c62a1d195ceac55be6e7679da7719c7c73dd0a4c3a2d8a3bba20ac97ea1b (same on-chain tx as 2c)
+Rate limits 4M/8h (nonce 5)
 https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA7c9bB2038eF9a3C58&id=multisig_0x94E9f383b085D32973634EA7c9bB2038eF9a3C58_0x277dd9b0853fc7c687b70effac9c3c4381c93d098bfd2b7d247b1554622ffd0b
 
 [HyperEVM] 3h. DONE 2026-10-01 11:42 UTC — https://hyperevmscan.io/tx/0x8f4b250ccfb3196e8356b4a007d7f9128044c4c7f5402a4fb8ba23b17f9dbd42

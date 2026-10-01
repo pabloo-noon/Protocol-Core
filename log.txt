@@ -67,3 +67,15 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
     limiter HL 1 in + out = 4,000,000 / 28,800 s
     behaviour (eth_call as the mailbox): unregistered origin reverts InvalidRemoteToken; ETH 1 wei passes; ETH 4M + 1 wei reverts (rate limit)
   Citrea is now fully done (2e + 3i).
+
+2026-10-01 11:52:50 UTC  [Bera] 2c + 3g  Safe nonces 4 and 5 executed together in one on-chain tx (batch of both execTransactions)
+  tx  https://berascan.com/tx/0xd4c7c62a1d195ceac55be6e7679da7719c7c73dd0a4c3a2d8a3bba20ac97ea1b   status 1, gas 316,130, 3/3 confirmations each
+  nonce 4  safeTxHash 0xfc4da63324b00f9931e440bfc288fc68820e3e20a1d58ad7e804c7cdd58a571f — executeUpgrade sUSN via Timelock (48h, matured 09-30) + setRateLimiter
+  nonce 5  safeTxHash 0x277dd9b0853fc7c687b70effac9c3c4381c93d098bfd2b7d247b1554622ffd0b — rate limits 4M/8h ETH route in+out
+  Verified on-chain after execution:
+    sUSN 0xdA67…c1eD  impl 0x657284c8337ab91b1a7d4eb66Be97596f4878117 (audited) | rateLimiter 0x51A3…55F6 | paused false
+    name/symbol/decimals unchanged | totalSupply 1,007,004.901767116529633656 unchanged | owner Safe | mailbox canonical | hyperlaneEnabled true | remoteTokens(1) = ETH sUSN (only route)
+    Safe holds DEFAULT_ADMIN + BLACKLIST_MANAGER, deployer none | timelock op 0xbc15adbc… consumed (scheduledAt = 0) | Safe nonce now 6
+    limiter HL 1 in + out = 4,000,000 / 28,800 s
+    behaviour (eth_call as the mailbox): unregistered origin reverts InvalidRemoteToken; ETH 1 wei passes; ETH 4M + 1 wei reverts (rate limit)
+  Bera is now fully done (2c + 3g).

@@ -20,7 +20,8 @@ zkSync the config txs cannot run before the upgrade tx.
  STEP 2 — the upgrades (independent of each other, any order):
    [ ] 2a  Ethereum nonce 346   executeUpgrade USN + sUSN + setRateLimiter x2          0/3   (after 1a AND 1b)
    [ ] 2b  Base     nonce 5     executeUpgrade sUSN + setRateLimiter                   0/3
-   [ ] 2c  Bera     nonce 4     executeUpgrade sUSN + setRateLimiter                   0/3
+   [x] 2c  DONE 2026-10-01 11:52 UTC — Bera nonce 4 executed, tx 0xd4c7c62a1d195ceac55be6e7679da7719c7c73dd0a4c3a2d8a3bba20ac97ea1b (with nonce 5)
+           sUSN impl 0x6572…8117, limiter wired, paused false, supply/roles unchanged (log.txt).
    [x] 2d  DONE 2026-10-01 11:22 UTC — HyperEVM nonce 4 executed, tx 0xb74fafce9c8a1318acd5763deb94b36fa82477a5ce9d79232ada41b7b75bd867
            sUSN impl 0xffC9…6227, limiter wired, paused false, supply/remote tokens/roles unchanged (log.txt).
    [x] 2e  DONE 2026-10-01 11:51 UTC — Citrea nonce 4 executed, tx 0x42a7865f526fb65d84c799a3cb205612f564f0f88182f91368a67b593019a40a (with nonce 5)
@@ -32,7 +33,8 @@ zkSync the config txs cannot run before the upgrade tx.
  STEP 3 — post-upgrade config (queued directly behind each upgrade, same signers):
    [ ] 3a  Ethereum nonce 347  rate limits 4M/8h all routes + TAC/Sophon closed (1 wei + 0x…dEaD)   0/3
    [ ] 3b  zkSync   nonce 38   same                                                              0/3
-   [ ] 3c  Base nonce 6 · Bera nonce 5  rate limits            0/3 · 0/3
+   [ ] 3c  Base nonce 6  rate limits            0/3
+   [x] 3c''' Bera nonce 5 DONE 2026-10-01 11:52 UTC — same tx as 2c (ETH route in+out 4M/8h; log.txt)
    [x] 3c'' Citrea nonce 5 DONE 2026-10-01 11:51 UTC — same tx as 2e (ETH route in+out 4M/8h; log.txt)
    [x] 3c' HyperEVM nonce 5 DONE 2026-10-01 11:42 UTC — tx 0x8f4b250ccfb3196e8356b4a007d7f9128044c4c7f5402a4fb8ba23b17f9dbd42 (12 buckets at target, TAC/Sophon dEaD; log.txt)
    [ ] 3d  Ethereum nonce 348  USN DVN config = sUSN (3 required) for eid 30165                     0/3
