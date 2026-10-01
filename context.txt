@@ -4,7 +4,7 @@ scripts/deploy-audited-implementations.md (runbook), scripts/out/audited-impleme
 (per-run record), scripts/out/safe/*.json (Safe batches).
 
 =====================================================================
-0. NEXT STEPS — ORDERED CHECKLIST (everything below is proposed/ready; nothing here is executed yet)
+0. NEXT STEPS — ORDERED CHECKLIST (steps 1-3 fully executed 2026-10-01; remaining: 4a Sophon peers, 4b audit items, 5 decisions)
 =====================================================================
 Signing order matters only where marked. Each Safe queue executes in nonce order, so on Ethereum and
 zkSync the config txs cannot run before the upgrade tx.
@@ -19,7 +19,7 @@ zkSync the config txs cannot run before the upgrade tx.
 
  STEP 2 — the upgrades (independent of each other, any order):
    [x] 2a  DONE 2026-10-01 17:48 UTC — Ethereum nonce 346 executed, tx 0xbbfd32feab45ce510cbc789d156e286ce67e956e0deb5da8680dfb5938bc305d (log.txt)
-   [ ] 2b  Base     nonce 5     executeUpgrade sUSN + setRateLimiter                   0/3
+   [x] 2b  DONE 2026-10-01 18:05 UTC — Base nonce 5 executed, tx 0x5a78b821c27f75291c2557b99b95beabe9c570a76c28cd0910893d84c90e480a (log.txt)
    [x] 2c  DONE 2026-10-01 11:52 UTC — Bera nonce 4 executed, tx 0xd4c7c62a1d195ceac55be6e7679da7719c7c73dd0a4c3a2d8a3bba20ac97ea1b (with nonce 5)
            sUSN impl 0x6572…8117, limiter wired, paused false, supply/roles unchanged (log.txt).
    [x] 2d  DONE 2026-10-01 11:22 UTC — HyperEVM nonce 4 executed, tx 0xb74fafce9c8a1318acd5763deb94b36fa82477a5ce9d79232ada41b7b75bd867
@@ -33,7 +33,7 @@ zkSync the config txs cannot run before the upgrade tx.
  STEP 3 — post-upgrade config (queued directly behind each upgrade, same signers):
    [x] 3a  DONE 2026-10-01 17:50 UTC — Ethereum nonce 347 executed, tx 0xd4391fa29231f3ce57133ce48be697a7e9cb2adf8f70434a8e37bf6f39fa36ee (log.txt)
    [x] 3b  DONE 2026-10-01 17:03 UTC — zkSync nonce 38 executed, tx 0x611c544f6c67e66954b3dc440c8b28e34afdae914b815fbae54780cc0a7b8e9e (all buckets at target, TAC/Sophon dEaD; log.txt)
-   [ ] 3c  Base nonce 6  rate limits            0/3
+   [x] 3c  DONE 2026-10-01 18:14 UTC — Base nonce 6 executed, tx 0x3650315dcf038f11524903a0ab2ade7eabbe56784e32ab33b93f2f96f053f342 (log.txt)
    [x] 3c''' Bera nonce 5 DONE 2026-10-01 11:52 UTC — same tx as 2c (ETH route in+out 4M/8h; log.txt)
    [x] 3c'' Citrea nonce 5 DONE 2026-10-01 11:51 UTC — same tx as 2e (ETH route in+out 4M/8h; log.txt)
    [x] 3c' HyperEVM nonce 5 DONE 2026-10-01 11:42 UTC — tx 0x8f4b250ccfb3196e8356b4a007d7f9128044c4c7f5402a4fb8ba23b17f9dbd42 (12 buckets at target, TAC/Sophon dEaD; log.txt)

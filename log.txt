@@ -129,3 +129,21 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
   scripts/verify-rollout.ts CHAINS=zksync: 42 PASS, 0 FAIL. zkSync is now fully done (1a, 3c, 3d, 3e).
   Still open from this: refund of the two skipped senders — 50,000 USN to 0x95780F943b6361FB11eEd893cf1237Dd9B3F54AF (ETH tx 0xc9bc0922…3c76)
   and 0.02 USN to 0x8b937c5395D95a8c8948C7C5B844e1541798d90C (ETH tx 0xc27bb7d5…9209). Both were debited on Ethereum, nothing minted on zkSync.
+
+2026-10-01 18:05:03 UTC  [Base] 2b  Safe nonce 5 — executeUpgrade sUSN via Timelock (48h, matured 09-30) + setRateLimiter
+  tx  https://basescan.org/tx/0x5a78b821c27f75291c2557b99b95beabe9c570a76c28cd0910893d84c90e480a   status 1, gas 122,040
+  safeTxHash 0x70f7fcc20b2e090c324850675e70c616b943bce92a04f19700cbca6de0dbe234 — Upgraded(sUSN -> 0xa02Ca8C6…8942)
+
+2026-10-01 18:14:51 UTC  [Base] 3f  Safe nonce 6 — rate limits 4M/8h (ETH, zkSync, HyperEVM in+out) + TAC/Sophon 1 wei + remote tokens 0x…dEaD
+  tx  https://basescan.org/tx/0x3650315dcf038f11524903a0ab2ade7eabbe56784e32ab33b93f2f96f053f342   status 1, gas 782,101
+  safeTxHash 0x6e9f5d7762ee25db64e36a4383ff60ebb512271321e573c1e70cdbe425cfca20 — Base Safe nonce now 7
+  Verified on-chain after execution:
+    sUSN 0x34a2…999F  impl 0xa02Ca8C6130B75b320FAa785034E95D4374A8942 (audited) | rateLimiter 0xEFff…6db7 | paused false | owner Safe | mailbox canonical | hyperlaneEnabled true
+    remoteTokens(1, 324, 999) unchanged; (239), (50104) = dEaD | Safe holds DEFAULT_ADMIN + BLACKLIST_MANAGER, deployer none | timelock op 0x75ef2944… consumed
+    limiter: 10 buckets at target (ETH / zkSync / HyperEVM in+out 4M / 28,800 s; TAC / Sophon in+out 1 wei)
+    handle(): unregistered origin, old TAC sender, old Sophon sender revert InvalidRemoteToken; ETH 1 wei passes; ETH 4M + 1 wei reverts (rate limit)
+  Base is now fully done (2b + 3f).
+
+=== ROLLOUT STATUS 2026-10-01 18:15 UTC: every queued Safe tx on all six chains is executed. scripts/verify-rollout.ts (all chains): 151 PASS, 4 FAIL —
+    the 4 FAILs are the Sophon-side peers (step 4a, raw signing, intentionally held until the 229.70 USN Sophon->ETH recovery is decided).
+    (Safe Transaction Service returned 403 again for egress IP 1.47.85.210 — Base hashes were taken from the Safe's on-chain ExecutionSuccess events.)

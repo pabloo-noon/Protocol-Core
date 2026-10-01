@@ -1,6 +1,6 @@
 Signing order for the bridge-rate-limiter upgrade — all Safe txs, in the order they must be signed and executed.
 Each Safe executes in nonce order, so within one Safe the list below is also the forced order.
-Steps 1a and 1b are DONE (2026-10-01) — step 2 can be executed. Everything else only needs its own Safe's previous nonce done.
+ALL SAFE TXS (steps 1-3) EXECUTED on 2026-10-01. Only step 4a (Sophon peers, raw signing) remains, held until the 229.70 USN recovery is decided.
 Execution log with verification: log.txt
 
 =====================================================================
@@ -22,7 +22,8 @@ STEP 2 — the upgrades (any order between chains; Ethereum only after 1a AND 1b
 Execute upgrade USN + sUSN, wire limiter (nonce 346)
 https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0x7bd94950f153146b648d51c025ce44f55b56c2e9587c955bed84aada37bb3cb7
 
-[Base] 2b. Execute upgrade sUSN, wire limiter (nonce 5)
+[Base] 2b. DONE 2026-10-01 18:05 UTC — https://basescan.org/tx/0x5a78b821c27f75291c2557b99b95beabe9c570a76c28cd0910893d84c90e480a
+Execute upgrade sUSN, wire limiter (nonce 5)
 https://app.safe.global/transactions/tx?safe=base:0xf56d33ef52642ce226A566610A979DC8d954592D&id=multisig_0xf56d33ef52642ce226A566610A979DC8d954592D_0x70f7fcc20b2e090c324850675e70c616b943bce92a04f19700cbca6de0dbe234
 
 [Bera] 2c. DONE 2026-10-01 11:52 UTC — https://berascan.com/tx/0xd4c7c62a1d195ceac55be6e7679da7719c7c73dd0a4c3a2d8a3bba20ac97ea1b (same on-chain tx as 3g)
@@ -61,7 +62,8 @@ https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b
 Skip stuck USN inbound nonces 139 + 140 from Ethereum (nonce 40)
 https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0xb1e1a22e52493015daa832ae07400ece7663a2b92d16d6390539d7b2a20bb3a3
 
-[Base] 3f. Rate limits 4M/8h, TAC + Sophon closed (nonce 6)
+[Base] 3f. DONE 2026-10-01 18:14 UTC — https://basescan.org/tx/0x3650315dcf038f11524903a0ab2ade7eabbe56784e32ab33b93f2f96f053f342
+Rate limits 4M/8h, TAC + Sophon closed (nonce 6)
 https://app.safe.global/transactions/tx?safe=base:0xf56d33ef52642ce226A566610A979DC8d954592D&id=multisig_0xf56d33ef52642ce226A566610A979DC8d954592D_0x6e9f5d7762ee25db64e36a4383ff60ebb512271321e573c1e70cdbe425cfca20
 
 [Bera] 3g. DONE 2026-10-01 11:52 UTC — https://berascan.com/tx/0xd4c7c62a1d195ceac55be6e7679da7719c7c73dd0a4c3a2d8a3bba20ac97ea1b (same on-chain tx as 2c)
