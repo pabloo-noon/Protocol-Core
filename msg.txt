@@ -1,0 +1,78 @@
+Signing order for the bridge-rate-limiter upgrade — all Safe txs, in the order they must be signed and executed.
+Each Safe executes in nonce order, so within one Safe the list below is also the forced order.
+Steps 1a and 1b are DONE (2026-10-01) — step 2 can be executed. Everything else only needs its own Safe's previous nonce done.
+Execution log with verification: log.txt
+
+=====================================================================
+STEP 1 — before the Ethereum upgrade (raises lzReceive gas toward mainnet)
+=====================================================================
+
+[zkSync] 1a. DONE 2026-10-01 10:57 UTC — https://explorer.zksync.io/tx/0x9ce950f66d596811903c5c67877e403d5815d27fd096cc2895e97069f8143246
+Upgrade USN + sUSN, wire limiter, setEnforcedOptions 120k toward ETH (nonce 37)
+https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0xac8c7b25a9525b9cd1ce1f1d1f951d13d877d4c5579d4304102cc4fb1052e0ca
+
+[Sui — Fordefi, not a Safe] 1b. DONE 2026-10-01 09:41 UTC — tx DZGHLitC8RuFnYZT1QNTR3wzs7AiBUs2DwSicXpMuJJP
+oapp::set_enforced_options(OApp, AdminCap, 30101, 1, 0x0003010011010000000000000000000000000001d4c0) — verified on-chain (table entry = exactly those 22 bytes)
+
+=====================================================================
+STEP 2 — the upgrades (any order between chains; Ethereum only after 1a AND 1b)
+=====================================================================
+
+[Ethereum] 2a. Execute upgrade USN + sUSN, wire limiter (nonce 346)
+https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0x7bd94950f153146b648d51c025ce44f55b56c2e9587c955bed84aada37bb3cb7
+
+[Base] 2b. Execute upgrade sUSN, wire limiter (nonce 5)
+https://app.safe.global/transactions/tx?safe=base:0xf56d33ef52642ce226A566610A979DC8d954592D&id=multisig_0xf56d33ef52642ce226A566610A979DC8d954592D_0x70f7fcc20b2e090c324850675e70c616b943bce92a04f19700cbca6de0dbe234
+
+[Bera] 2c. Execute upgrade sUSN, wire limiter (nonce 4)
+https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA7c9bB2038eF9a3C58&id=multisig_0x94E9f383b085D32973634EA7c9bB2038eF9a3C58_0xfc4da63324b00f9931e440bfc288fc68820e3e20a1d58ad7e804c7cdd58a571f
+
+[HyperEVM] 2d. Execute upgrade sUSN, wire limiter (nonce 4) — 1/3 signed
+https://app.safe.global/transactions/tx?safe=hyper-evm:0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8&id=multisig_0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8_0x84e38af23fb035ea08d55795cb09a9998ea9259af1671cd2c19b319f668c7d9d
+
+[Citrea] 2e. Execute upgrade sUSN, wire limiter (nonce 4) — 1/3 signed
+https://safe.citrea.xyz/transactions/tx?safe=citrea-mainnet:0xB2aD758Ee2710527A28d906F9588938c2e5cFc80&id=multisig_0xB2aD758Ee2710527A28d906F9588938c2e5cFc80_0x152a0bf41ddf58fa2e14704f822672e6477d5a4b2ed4b5957e8b1ed085db7724
+
+=====================================================================
+STEP 3 — post-upgrade config (each one is the next nonce of its Safe)
+=====================================================================
+
+[Ethereum] 3a. Rate limits 4M/8h all routes in+out, TAC + Sophon closed (1 wei + 0x…dEaD) (nonce 347)
+https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0xe4a7b195c4b76c3fc9e36767e858d3eb1611bff7e75554706dc29c68cef957c1
+
+[Ethereum] 3b. USN DVN config = sUSN (3 required) toward zkSync (nonce 348)
+https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0x67b3f3af5c0178fe392d822aa61138501935c73b470c805f3ef919e2ac38f124
+
+[zkSync] 3c. Rate limits 4M/8h, TAC + Sophon closed (nonce 38)
+https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x6eb1e08c044a6d67fffd258a6ec4622114d68757fe3c76f10460a09526b4880d
+
+[zkSync] 3d. USN DVN config = sUSN (3 required) toward Ethereum (nonce 39)
+https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x5246d296c87e60285461ff524195d81062c6b7daf25356905fd4f8dd37c20bec
+
+[zkSync] 3e. Skip stuck USN inbound nonces 139 + 140 from Ethereum (nonce 40)
+https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0xb1e1a22e52493015daa832ae07400ece7663a2b92d16d6390539d7b2a20bb3a3
+
+[Base] 3f. Rate limits 4M/8h, TAC + Sophon closed (nonce 6)
+https://app.safe.global/transactions/tx?safe=base:0xf56d33ef52642ce226A566610A979DC8d954592D&id=multisig_0xf56d33ef52642ce226A566610A979DC8d954592D_0x6e9f5d7762ee25db64e36a4383ff60ebb512271321e573c1e70cdbe425cfca20
+
+[Bera] 3g. Rate limits 4M/8h (nonce 5)
+https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA7c9bB2038eF9a3C58&id=multisig_0x94E9f383b085D32973634EA7c9bB2038eF9a3C58_0x277dd9b0853fc7c687b70effac9c3c4381c93d098bfd2b7d247b1554622ffd0b
+
+[HyperEVM] 3h. Rate limits 4M/8h, TAC + Sophon closed (nonce 5) — 1/3 signed
+https://app.safe.global/transactions/tx?safe=hyper-evm:0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8&id=multisig_0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8_0x8e308ebc326fdb7701d6accc08715d4542f192439041e6b5e21634ab0c147767
+
+[Citrea] 3i. Rate limits 4M/8h (nonce 5) — 1/3 signed
+https://safe.citrea.xyz/transactions/tx?safe=citrea-mainnet:0xB2aD758Ee2710527A28d906F9588938c2e5cFc80&id=multisig_0xB2aD758Ee2710527A28d906F9588938c2e5cFc80_0x857c682bc5c24706b7a390ead488a7d9a31500b098d091b7c4d10e76cce17e82
+
+=====================================================================
+STEP 4 — deprecated chains (independent of the upgrade)
+=====================================================================
+
+[Sophon — no Safe UI] 4a. Zero LayerZero peers to ETH + zkSync on USN and sUSN (4 calls)
+Safe 0x553d36879016Ce22977a622804EeE76Dc0dC88e0 — raw signing: scripts/out/safe/sophon-zero-peers.json via scripts/safe-raw-tx.ts (MODE=hash, 3x MODE=sign, MODE=exec)
+Do 4a only AFTER the 229.70 USN Sophon->ETH recovery (audit H-4) has been handled, since that recovery needs the Sophon peer still set.
+
+Before 3a / 3c / 3f / 3h execute: block TAC + Sophon in the front-end and announce (anything bridged from them afterwards burns at source).
+
+=====================================================================
+After everything: npx hardhat run scripts/verify-rollout.ts  (expects 0 FAIL), then one tiny test transfer per direction.

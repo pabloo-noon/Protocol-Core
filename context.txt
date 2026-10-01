@@ -11,10 +11,11 @@ zkSync the config txs cannot run before the upgrade tx.
 
  STEP 1 — BEFORE Ethereum nonce 346 (both raise the lzReceive gas toward mainnet; without them
           zkSync->ETH and Sui->ETH deliveries stall at 65k after the ETH sUSN/USN upgrade):
-   [ ] 1a  zkSync Safe 0x15d9…a263  nonce 37  upgrade batch incl. setEnforcedOptions(30101, SEND, 120k) x2   0/3 signed
-           https://app.safe.global/transactions/queue?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263
-   [ ] 1b  Sui admin key 0x67cd…906d  oapp::set_enforced_options(OApp, AdminCap, 30101, 1, lzReceive 120k)   (section 6, exact command)
-           verify: get_enforced_options(0xe8a26b0b…029f, 30101, 1) returns 0x0003…01d4c0
+   [x] 1a  DONE 2026-10-01 10:57 UTC — zkSync Safe nonce 37 executed, tx 0x9ce950f66d596811903c5c67877e403d5815d27fd096cc2895e97069f8143246
+           USN impl 0xb00B…8C22, sUSN impl 0x8B9E…A03d, rateLimiter wired, enforcedOptions(30101,1) = 120k on both, supplies unchanged (log.txt).
+   [x] 1b  DONE 2026-10-01 09:41 UTC — Sui tx DZGHLitC8RuFnYZT1QNTR3wzs7AiBUs2DwSicXpMuJJP (admin key via Fordefi):
+           oapp::set_enforced_options(OApp, AdminCap, 30101, 1, 0x0003010011010000000000000000000000000001d4c0). Verified by reading the
+           enforced_options table: key {eid 30101, msg_type 1} => exactly those 22 bytes (lzReceive 120k).
 
  STEP 2 — the upgrades (independent of each other, any order):
    [ ] 2a  Ethereum nonce 346   executeUpgrade USN + sUSN + setRateLimiter x2          0/3   (after 1a AND 1b)
@@ -331,7 +332,8 @@ DVNs — PARITY OK, 3 required both directions (proven by delivered traffic, not
 
 Traffic (Etherscan, all time): 34 ETH->Sui sends (first 2026-07-03, last 2026-09-24), 10 Sui->ETH receives (last 2026-09-09).
 
-Enforced options: EMPTY ON BOTH SIDES.
+Enforced options: Sui side SET 2026-10-01 09:41 UTC (tx DZGHLitC8RuFnYZT1QNTR3wzs7AiBUs2DwSicXpMuJJP): (30101, SEND) = lzReceive 120k, verified.
+ETH side still empty (optional hardening 4b-6). Everything below this line describes the state BEFORE that tx.
   ETH->Sui: senders pass lzReceive gas 500,000 (all recent sends carry 0x0003010011010000000000000000000000000007a120). Delivered fine.
   Sui->ETH: senders pass lzReceive gas 65,000 (LZ Scan options on both 09-09 deliveries). Executor txs used 85.7k total
      (≈ 64.7k inside lzReceive) on the CURRENT implementation. After Ethereum nonce 346 the sUSN _credit path costs

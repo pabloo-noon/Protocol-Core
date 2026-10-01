@@ -1,0 +1,23 @@
+EXECUTION LOG — bridge-rate-limiter upgrade rollout
+(what was actually executed, in order, with on-chain verification; the plan is msg.txt / context.txt section 0)
+
+---------------------------------------------------------------------
+2026-09-30 19:27–19:28 UTC  Base / Bera / Citrea — deployer EOA renounced DEFAULT_ADMIN + BLACKLIST_MANAGER on the sUSN receivers
+  (after granting them to the Safes earlier the same day; tx hashes in context.txt section 3)
+  Verified: hasRole(deployer) = false on all three; Safe holds both roles; pause() simulates from each Safe.
+
+2026-10-01 09:41 UTC  [Sui] 1b  oapp::set_enforced_options(OApp, AdminCap, 30101, 1, lzReceive 120k)   — admin key via Fordefi
+  tx  DZGHLitC8RuFnYZT1QNTR3wzs7AiBUs2DwSicXpMuJJP
+  Verified: enforced_options table entry {eid 30101, msg_type 1} = 0x0003010011010000000000000000000000000001d4c0 (22 bytes).
+
+2026-10-01 10:57:35 UTC  [zkSync] 1a  Safe nonce 37 — upgrade USN + sUSN, wire limiter, enforced options 120k toward ETH
+  tx  https://explorer.zksync.io/tx/0x9ce950f66d596811903c5c67877e403d5815d27fd096cc2895e97069f8143246
+  safeTxHash 0xac8c7b25a9525b9cd1ce1f1d1f951d13d877d4c5579d4304102cc4fb1052e0ca — ExecutionSuccess, gas 278,216
+  Verified on-chain after execution:
+    USN  0x0469…c0B6  impl 0xb00B492099323E386dFD1E014850Ca16396E8C22 (audited) | rateLimiter 0xE69d…455E | enforcedOptions(30101,1) = 120k | totalSupply 30,520.12 unchanged | owner Safe | peer(30101) ETH USN
+    sUSN 0xB6a0…4c4f  impl 0x8B9E886B6850615911c61a7cd10c9C6630d1A03d (audited) | rateLimiter 0xE69d…455E | enforcedOptions(30101,1) = 120k | paused false | totalSupply 904.47 unchanged | owner Safe | peer(30101) ETH sUSN
+  Limits are still 0 (= unlimited) until nonce 38. Safe nonce is now 38.
+  => Both preconditions for Ethereum nonce 346 (step 2a) are met.
+
+---------------------------------------------------------------------
+NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 · 2e Citrea 4 · then step 3 config txs · 4a Sophon peers (after the 229.70 USN recovery).
