@@ -1,0 +1,44 @@
+Following up on our last message. The audited upgrade and the configuration changes we listed are now executed on every chain. Here is the state, with the transactions.
+
+Executed on 1 October 2026
+
+Audited upgrade (bridge rate limiter plus audit feedback) on all six live chains. Every proxy now runs the audited implementation, verified on each explorer, and is wired to a per-chain rate limiter owned by the chain Safe. Storage was verified slot by slot before and after, no state other than the intended changes moved.
+- Ethereum, USN and sUSN: https://etherscan.io/tx/0xbbfd32feab45ce510cbc789d156e286ce67e956e0deb5da8680dfb5938bc305d
+- zkSync, USN and sUSN: https://explorer.zksync.io/tx/0x9ce950f66d596811903c5c67877e403d5815d27fd096cc2895e97069f8143246
+- Base, sUSN: https://basescan.org/tx/0x5a78b821c27f75291c2557b99b95beabe9c570a76c28cd0910893d84c90e480a
+- HyperEVM, sUSN: https://hyperevmscan.io/tx/0xb74fafce9c8a1318acd5763deb94b36fa82477a5ce9d79232ada41b7b75bd867
+- Citrea, sUSN: https://explorer.mainnet.citrea.xyz/tx/0x42a7865f526fb65d84c799a3cb205612f564f0f88182f91368a67b593019a40a
+- Bera, sUSN: https://berascan.com/tx/0xd4c7c62a1d195ceac55be6e7679da7719c7c73dd0a4c3a2d8a3bba20ac97ea1b
+
+Bridge limits live on every route. 4,000,000 tokens per route per 8 hour sliding window, inbound and outbound, on every LayerZero and Hyperlane route we operate. Deprecated routes are capped at 1 wei.
+- Ethereum: https://etherscan.io/tx/0xd4391fa29231f3ce57133ce48be697a7e9cb2adf8f70434a8e37bf6f39fa36ee
+- zkSync: https://explorer.zksync.io/tx/0x611c544f6c67e66954b3dc440c8b28e34afdae914b815fbae54780cc0a7b8e9e
+- Base: https://basescan.org/tx/0x3650315dcf038f11524903a0ab2ade7eabbe56784e32ab33b93f2f96f053f342
+- HyperEVM: https://hyperevmscan.io/tx/0x8f4b250ccfb3196e8356b4a007d7f9128044c4c7f5402a4fb8ba23b17f9dbd42
+- Citrea: same transaction as the upgrade above
+- Bera: same transaction as the upgrade above
+
+USN ETH to zkSync now at 3 required DVNs both ways, the same set as sUSN (Horizen, Frax, LayerZero Labs). The two stale messages that the single DVN never signed were skipped on the zkSync endpoint so the channel is in sync again, and the two senders are being made whole directly.
+- Ethereum send and receive config: https://etherscan.io/tx/0xb5d86af5964c16f44d9e69a37b9fcc12a84a5999d3a76277379d4dce33d36120
+- zkSync send and receive config: https://explorer.zksync.io/tx/0xabd03aedf642272f42cf0124022f2930d289fc7edb527e318054e2d47d20c2f5
+- zkSync skip of the two stale nonces: https://explorer.zksync.io/tx/0xd2579e1955d403f46412040096f426e289d6b72fa829b3feacc523acdfab5ed8
+
+TAC and Sophon Hyperlane routes closed on our side. The remote token for both is set to a dead address on Ethereum, zkSync, Base and HyperEVM, and their limiter buckets are 1 wei, so nothing can be delivered from them. Included in the bridge limit transactions above.
+
+Flare zeroed on its side. Both Flare OFTs now have no peer in either direction, 0 supply, archived.
+- sUSN: https://flare-explorer.flare.network/tx/0xbb73382601d012d4c70e921b638dd55f64c1dff62f445d479050b9f6107828fa
+- USN: https://flare-explorer.flare.network/tx/0x2e2f7c924487f40342e1e109792381ba4e58c71b6e9d5a76107127dccc863522
+
+LayerZero receive gas raised toward Ethereum. The upgraded Ethereum receivers need more gas per delivery, so the enforced lzReceive gas on zkSync (in the upgrade transaction above) and on Sui was raised to 120k before the Ethereum upgrade executed.
+- Sui: https://suiscan.xyz/mainnet/tx/DZGHLitC8RuFnYZT1QNTR3wzs7AiBUs2DwSicXpMuJJP
+
+Verified end to end after execution
+- USN Ethereum to zkSync delivered with the new 3 DVN set, the first delivery on that leg since April: https://layerzeroscan.com/tx/0xbbd8e2f71a611960c812ad5bee894cf394387d02294ab160dc42b996cd19e090
+- sUSN zkSync to Ethereum delivered under the new enforced gas: https://layerzeroscan.com/tx/0x4de9df2013450cc2443bac66d09a72402a0b2ede9c66dd9b7136f75799b9ff4d
+- Hyperlane Ethereum to Bera delivered on the upgraded receiver and counted by the limiter.
+
+Remaining
+- Sophon's own LayerZero peers are still registered on the Sophon side. Ethereum and zkSync already reject them. We will zero them from the Sophon Safe shortly, this only changes how the deprecated deployment reads on chain.
+- Timelock in front of the zkSync proxy admins, to match the 48 hour setup of the other chains.
+
+Let me know if this addresses all your questions.
