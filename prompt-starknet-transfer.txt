@@ -1,0 +1,27 @@
+Make a script that moves ownership of both Noon Starknet warp routers from the current single-key account to our Fordefi Starknet vault, with proof-of-control before anything irreversible. Reuse the same Braavos account signer setup you used for the TAC/Sophon unenroll transactions.
+
+Facts (verified on chain 2026-10-02, re-verify yourself before acting):
+- Routers: USN 0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b, sUSN 0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17.
+- Current owner of both: 0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072 (Braavos account, single Stark signer).
+- Target owner: 0x07b7e6222b0c06ae6d342ca83a4ee64fa4269476e37adfdcd9cb183e137391b6 (Fordefi vault; deployed account, class 0x36078334509b514626504edc9fb252328d1a240e4e948bef8d0c08dff45927f, get_version 0.4.0, nonce 1).
+- The routers use one-step OpenZeppelin Ownable: transfer_ownership(new_owner) takes effect immediately, there is no pending_owner / accept_ownership. A wrong address is unrecoverable.
+- Ownership is the only privileged role on these contracts. It gates: upgrade, set_hook, set_interchain_security_module, enroll_remote_router(s), unenroll_remote_router(s), set_destination_gas, transfer_ownership, renounce_ownership. There are no other roles, caps or admin contracts to move.
+- Expected invariants that must not change: domains() = [1, 324] on both; routers(1) and routers(324) unchanged; class hash unchanged; hook and ISM unchanged.
+
+Required steps, in this order, each one verified on chain before the next:
+1. Pre-flight (read-only): print owner(), domains(), routers(1), routers(324), get_hook(), interchain_security_module(), class hash for both routers; confirm the target address has code, print its class hash and nonce, and confirm the target is NOT one of the routers, not the current owner, and exactly 32 bytes.
+2. Proof of control of the target: before any transfer, Fordefi must execute one transaction from 0x07b7e622…91b6 (a zero-value self-transfer of STRK is enough) and you must find that transaction on chain and print its hash. Do not proceed without it.
+3. Transfer USN router only: simulate transfer_ownership(target) with starknet_simulateTransactions from the current owner, show the simulation result and fee, then send. Wait for ACCEPTED_ON_L2, re-read owner() = target.
+4. Prove Fordefi can operate as owner: have Fordefi execute a harmless owner-only call on the USN router, set_destination_gas(1, <current value for domain 1>) with the exact current value so nothing changes, and confirm it succeeds. If it reverts, stop and report; do not transfer sUSN.
+5. Transfer sUSN router the same way (simulate, send, wait, re-read owner() = target).
+6. Post-flight: re-print everything from step 1 for both routers and diff against the pre-flight; the only difference must be owner().
+7. Print a summary with both transfer_ownership transaction hashes and Voyager links.
+
+Hard rules:
+- Never call renounce_ownership, upgrade, set_hook, set_interchain_security_module, enroll or unenroll anything.
+- Every write goes through a simulation first; abort on any revert or on any unexpected pre-flight value.
+- BROADCAST=true is required to send; default is a dry run that executes steps 1 and the simulations only.
+- Take addresses from constants at the top of the script, printed in full before use; no abbreviations.
+- Do not touch anything on Ethereum, zkSync or any other chain.
+
+Deliver the script path, the dry-run output, and after the broadcast the post-flight diff and the two tx hashes.
