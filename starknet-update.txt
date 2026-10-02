@@ -1,0 +1,34 @@
+Hi team, quick update on the Noon bridge estate and three things we need on the Starknet side.
+
+Where we are
+
+We executed the audited upgrade of our bridge receivers on Ethereum, zkSync, Base, HyperEVM, Citrea and Bera on 1 October. Every route we operate now runs through a per-chain rate limiter: 4,000,000 tokens per route per 8 hour sliding window, inbound and outbound. Starknet is covered on every chain that enrolls it, in both directions:
+- Ethereum USN and sUSN, zkSync USN and sUSN, HyperEVM sUSN, all capped at 4M per 8h toward and from Starknet (domain 358974494).
+
+We also closed the TAC (domain 239) and Sophon (domain 50104) Hyperlane routes on our side. On Ethereum, zkSync, Base and HyperEVM the remote token for those two domains now points to a dead address and their limiter buckets are 1 wei, so nothing from TAC or Sophon can be delivered to us anymore. Transactions:
+- Ethereum: https://etherscan.io/tx/0xd4391fa29231f3ce57133ce48be697a7e9cb2adf8f70434a8e37bf6f39fa36ee
+- zkSync: https://explorer.zksync.io/tx/0x611c544f6c67e66954b3dc440c8b28e34afdae914b815fbae54780cc0a7b8e9e
+- Base: https://basescan.org/tx/0x3650315dcf038f11524903a0ab2ade7eabbe56784e32ab33b93f2f96f053f342
+- HyperEVM: https://hyperevmscan.io/tx/0x8f4b250ccfb3196e8356b4a007d7f9128044c4c7f5402a4fb8ba23b17f9dbd42
+
+What we need on Starknet
+
+The two Starknet warp routers still enroll TAC and Sophon, so the closure is not complete until they are unenrolled there too. Today TAC or Sophon supply can still move to Starknet, and from Starknet onward to Ethereum.
+
+Routers:
+- USN  0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b
+- sUSN 0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17
+Both currently enroll domains 1 (Ethereum), 324 (zkSync), 239 (TAC) and 50104 (Sophon).
+
+1. Unenroll TAC and Sophon on both routers
+   unenroll_remote_router(239) and unenroll_remote_router(50104) on the USN router and on the sUSN router. Four calls in total. After that the only live routes from Starknet are Ethereum and zkSync, which matches our side.
+
+2. HyperEVM on the sUSN router, your call
+   Our HyperEVM sUSN receiver has Starknet registered, but the Starknet sUSN router does not enroll HyperEVM (domain 999). Either enroll it, enroll_remote_router(999, 0x00000000000000000000000034a2798d47b238a7cba9d87d49618dee6c4d999f), and we add the HyperEVM to Starknet buckets on our limiter, or tell us and we point HyperEVM's Starknet entry at the dead address as well. Right now a HyperEVM to Starknet send would burn on HyperEVM and never mint. There has been no traffic on that pair, so there is no urgency, but it should be one or the other.
+
+3. Ownership of the routers
+   Both routers are owned by the account 0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, which is a Braavos account with a single Stark signer. That key can upgrade the router class, enroll or unenroll routers and change the hook. On every other chain our bridge contracts sit behind a multisig, and the audit flagged this as the one remaining single-key admin. Can we move both routers to a multisig account with at least 2 of 3 signers, or add signers to the existing account so it is no longer single-key.
+
+For your awareness, the Ethereum side limiter means a Starknet-side incident is bounded at 4,000,000 per token per 8 hours into Ethereum, but we would rather not rely on that alone.
+
+Let us know when 1 is done and what you prefer for 2 and 3, and we will re-run our route checks and update the configuration on our side the same day.
