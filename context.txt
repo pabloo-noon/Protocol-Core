@@ -67,9 +67,9 @@ zkSync the config txs cannot run before the upgrade tx.
             or refund off-chain.
    [ ] 4b-3 Transfer the deployer-owned ProxyAdmins to the chain Safes: TAC USN 0xF405…2Bbe, TAC sUSN 0x3684…cFc7, Sophon sUSN
             0x90D0…9D5f (deployer EOA tx each; single-step Ownable, double-check the Safe address).
-   [ ] 4b-4 Starknet routers (USN 0x01e6…135b, sUSN 0x0241…4d17, owner = single-key Braavos 0x25beda…3072):
-            unenroll_remote_router(239) + (50104) on both — otherwise TAC/Sophon->Starknet->ETH stays open — then transfer_ownership
-            to a Starknet multisig.
+   [~] 4b-4 Starknet routers (USN 0x01e6…135b, sUSN 0x0241…4d17, owner = single-key Braavos 0x25beda…3072):
+            unenroll_remote_router(239) + (50104) DONE 2026-10-02 on both (txs in log.txt; domains() = [1, 324]).
+            STILL OPEN: transfer_ownership to a Starknet multisig.
    [ ] 4b-5 ETH Safe: revokeRole(REBASE_MANAGER_ROLE, deployer 0x1738…D699) + revokeRole(REBASE_MANAGER_ROLE, 0xcC24…b11f) on sUSN.
    [ ] 4b-6 ETH Safe: setEnforcedOptions USN + sUSN (30165, SEND, 120k) and sUSN (30378, SEND, 500k) so delivery no longer
             depends on the front-end's extraOptions.

@@ -156,3 +156,10 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
   Hyperlane: ETH -> Bera 0.01 sUSN (15:39 -> 15:42 UTC) delivered on the upgraded Bera receiver and recorded by its limiter (see above).
 
 2026-10-02  EXTRA POST-UPGRADE CHECKS (scripts/post-upgrade-checks.ts + scripts/storage-sanity.ts) — see post-upgrade.txt sections 6-8. No failed transactions to any proxy since the upgrades.
+
+2026-10-02  [Starknet] TAC (239) + Sophon (50104) unenrolled on both warp routers (owner account 0x25beda…3072)
+  USN  router 0x01e6545c…135b  tx 0x32c650e4a666d97657618bd78cba8301d9b92ca3fd0750599cd780594eac88d  SUCCEEDED, ACCEPTED_ON_L2, block 15772507
+  sUSN router 0x02411565…4d17  tx 0x4bb907526de6624fa55d88348eb101137a663065604007817829812e5a1935b  SUCCEEDED, ACCEPTED_ON_L2, block 15772517
+  Verified (starknet_call): domains() = [1, 324] on both; routers(239) / routers(50104) unset; routers(1) and routers(324) unchanged
+  (ETH USN/sUSN, zkSync USN/sUSN); owner unchanged. The TAC/Sophon closure is now complete at every end (ETH, zkSync, Base,
+  HyperEVM dEaD + 1 wei; Starknet unenrolled). Still open on Starknet: HyperEVM asymmetry (4b-7) and router ownership -> multisig (4b-4).
