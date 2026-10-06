@@ -28,17 +28,17 @@ and emergency actions take 4 hours instead of 2 days. The 2-day GenericTimelock 
 Address coincidences to keep straight: Base's V2 (`0x7704…2Ef2`) is the same address as HyperEVM's BridgeRateLimiter, and Citrea's V2
 (`0x8B83…98a5`) is the same address as Bera's superseded 2-day timelock (same deployer, same nonce on different chains).
 
-### Hand-over status (phase 1 re-proposed 2026-10-06 ~12:41 UTC against the V2 timelocks; the 2026-10-06 11:2x proposals against the
-2-day timelocks were deleted from the Safe services, HTTP 204, before any signature)
+### Hand-over status (phase 1 re-proposed 2026-10-06 ~12:52 UTC with eta = now + 24h; the 12:41 proposals (eta +3d) and the 11:2x proposals
+against the 2-day timelocks were deleted from the Safe services, HTTP 204, before any signature)
 
-| chain | phase 1 proposed | phase 1 executed | eta (execute phase 1 before eta − 4h) | phase 2 proposed | phase 2 executed |
+| chain | phase 1 proposed | phase 1 executed | eta (phase 1 must execute before eta − 4h = 2026-10-07 ~08:52 UTC) | phase 2 proposed | phase 2 executed |
 |---|---|---|---|---|---|
-| Ethereum | nonce 349, safeTxHash 0x0a25bc295866d9cc6fa7438271e123de3c8165496509a4a09144b58f0f6ec445 | — | 1791564059 = 2026-10-09 16:40:59 UTC | — | — |
-| Base | nonce 7, safeTxHash 0x686ce85cdd37b5f2ef893dc6e8a9302e17a9d46d63251d459a15e0cdb12a91b5 | — | 1791564073 = 2026-10-09 16:41:13 UTC | — | — |
-| HyperEVM | nonce 6, safeTxHash 0x31d3cc829fdc2f3d48ce4ae37a6d9dfbc1d938be0bffe0b63a0428950a8a74ac | — | 1791564084 = 2026-10-09 16:41:24 UTC | — | — |
-| Citrea | nonce 6, safeTxHash 0x799d8f2e0006fdaeee1c505a29c70d0cefce15e12e20f56d15cb500093d8fd3e | — | 1791564085 = 2026-10-09 16:41:25 UTC | — | — |
-| Bera | nonce 6, safeTxHash 0x2e6c5bebec12d140def7b0ee822129d2c7675d325db8b1b26c4022fd1c983c56 | — | 1791564092 = 2026-10-09 16:41:32 UTC | — | — |
-| zkSync | nonce 41, safeTxHash 0xde994d4ccf030b5abb7861614c443112eed8ef2c98218590d6f07f58ef0a1717 | — | 1791564096 = 2026-10-09 16:41:36 UTC | — | — |
+| Ethereum | nonce 349, safeTxHash 0xadff9a0ccf42a284ff0995cd708a6ee573b55d5bd38f015b82364b96fc1a1283 | — | 1791377519 = 2026-10-07 12:51:59 UTC | — | — |
+| Base | nonce 7, safeTxHash 0xf07c38570f9b041a689a74f1ad40f64f10f65a458727802836d5205f2bd11976 | — | 1791377535 = 2026-10-07 12:52:15 UTC | — | — |
+| HyperEVM | nonce 6, safeTxHash 0xc17c1fa137126f5308c92311b042be2015b26e19602bd944dd8b881625985849 | — | 1791377543 = 2026-10-07 12:52:23 UTC | — | — |
+| Citrea | nonce 6, safeTxHash 0x23edc1cdc769ca3d410dac49bc75f2bbad20d141f666e024a20dccd6ab64cee0 | — | 1791377545 = 2026-10-07 12:52:25 UTC | — | — |
+| Bera | nonce 6, safeTxHash 0x00a2df9c15c0c5474df6b0ab187910e062871ca55d618095027fa04193b1b94e | — | 1791377550 = 2026-10-07 12:52:30 UTC | — | — |
+| zkSync | nonce 41, safeTxHash 0x3519de40d7417604123cee6beb1f115100c88f824cd592bbdff9ba3c4fa8078d | — | 1791377541 = 2026-10-07 12:52:21 UTC | — | — |
 
 Safe links: see msg.txt STEP 6.
 

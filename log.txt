@@ -190,3 +190,7 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
 2026-10-06 12:40–12:41 UTC  Phase 1 re-proposed on all 6 Safes against the V2 timelocks (0/3 each):
   Ethereum nonce 349 0x0a25bc29…c445 · Base nonce 7 0x686ce85c…91b5 · HyperEVM nonce 6 0x31d3cc82…74ac · Citrea nonce 6 0x799d8f2e…fd3e ·
   Bera nonce 6 0x2e6c5beb…3c56 · zkSync nonce 41 0xde994d4c…1717. etas 2026-10-09 16:40–16:41 UTC; phase 1 must execute before 2026-10-09 ~12:41 UTC.
+
+2026-10-06 12:52 UTC  Phase 1 re-proposed again with eta = now + 24h (ETA_BUFFER 20h) after deleting the 12:41 proposals (HTTP 204, unsigned):
+  Ethereum nonce 349 0xadff9a0c…1283 · Base nonce 7 0xf07c3857…1976 · HyperEVM nonce 6 0xc17c1fa1…5849 · Citrea nonce 6 0x23edc1cd…cee0 ·
+  Bera nonce 6 0x00a2df9c…b94e · zkSync nonce 41 0x3519de40…078d. etas 2026-10-07 12:51–12:52 UTC; phase 1 must execute before 2026-10-07 ~08:52 UTC.
