@@ -43,16 +43,18 @@ Phase 1 (one batch): `limiter.transferOwnership(timelock)` + `timelock.queue(lim
 `eta = now + delay + 3 days` of signing slack; phase 1 must be executed by the Safe before `eta - 2 days`, otherwise `queue`
 reverts `EtaTooSoon` and the batch has to be rebuilt with a new eta.
 Phase 2 (after the eta, within 14 days): `timelock.execute(limiter, 0, "acceptOwnership()", 0x, eta)` → limiter owner = timelock.
-Both calls are `onlyOwner` on the timelock, so both are Safe transactions. Status per chain:
+Both calls are `onlyOwner` on the timelock, so both are Safe transactions. Each chain's eta is fixed at proposal time and stored in
+`scripts/out/safe/<chain>-limiter-timelock.json`; re-running the proposer for a chain that is already queued would mint a new eta, so
+restrict re-runs with `CHAINS=…`. Status per chain:
 
 | chain | phase 1 proposed | phase 1 executed | eta | phase 2 proposed | phase 2 executed |
 |---|---|---|---|---|---|
-| Ethereum | — | — | — | — | — |
-| Base | — | — | — | — | — |
-| HyperEVM | — | — | — | — | — |
-| Citrea | — | — | — | — | — |
-| Bera | — | — | — | — | — |
-| zkSync | — | — | — | — | — |
+| Ethereum | nonce 349, safeTxHash 0xed68741d327c247ea7e712681a6006386c4ec03cb07aa0a3e22f9537db3e6a47 (2026-10-06) | — | 1791717959 = 2026-10-11 11:25:59 UTC (phase 1 must execute before 2026-10-09 11:25 UTC) | — | — |
+| Base | nonce 7, safeTxHash 0xb29f5743ce650854448d755d604f344b754139c0f29fa0c5dcde0b1952ef3301 (2026-10-06) | — | 1791717971 = 2026-10-11 11:26:11 UTC (phase 1 must execute before 2026-10-09 11:26 UTC) | — | — |
+| HyperEVM | nonce 6, safeTxHash 0x9a8c3e60398b8605f1c7e9da725e89f69856a999fc1f446d1f09523bd76f743d (2026-10-06) | — | 1791717985 = 2026-10-11 11:26:25 UTC (phase 1 must execute before 2026-10-09 11:26 UTC) | — | — |
+| Citrea | nonce 6, safeTxHash 0xf2dec1816f9d5813cffc8b45bceca9d609f3ad8551f8eadf518d64245547206f (2026-10-06) | — | 1791717581 = 2026-10-11 11:19:41 UTC (phase 1 must execute before 2026-10-09 11:19 UTC) | — | — |
+| Bera | nonce 6, safeTxHash 0xe0344c721e75e3cc8061c03cc692330a38905854c7ead883e7bb0ecc0a520ab6 (2026-10-06) | — | 1791717986 = 2026-10-11 11:26:26 UTC (phase 1 must execute before 2026-10-09 11:26 UTC) | — | — |
+| zkSync | nonce 41, safeTxHash 0xd2f602495466db4b242e0da0156eb62c746e1042c8aa57e07977a6fa09ab3aa5 (2026-10-06) | — | 1791717981 = 2026-10-11 11:26:21 UTC (phase 1 must execute before 2026-10-09 11:26 UTC) | — | — |
 
 Commands:
 ```

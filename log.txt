@@ -169,3 +169,8 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
   Also deployed 2026-10-05: Base 0xF8241FCca17e8fD91506DaA3f6FF87Fe3eeFbAcB, HyperEVM 0xDeFC5bFca15C45fE71339714fFc108518B35B1D3,
   Citrea 0x69507fece7289E940E440b3e6cFc535c7aF306E9, Bera 0x8B83A9f5d422B062619aC0309Eab6D54566198a5 (all verified); Ethereum reuses 0x36857EF0…9722.
   Nothing handed over yet: limiters still owned by the Safes (decision on the 2-day emergency delay pending, generic-timelock.md).
+
+2026-10-06 11:19–11:26 UTC  [all 6 Safes] GenericTimelock -> BridgeRateLimiter hand-over, PHASE 1 PROPOSED (0/3 each; nothing executed)
+  Ethereum nonce 349 0xed68741d…6a47 · Base nonce 7 0xb29f5743…3301 · HyperEVM nonce 6 0x9a8c3e60…743d · Citrea nonce 6 0xf2dec181…206f ·
+  Bera nonce 6 0xe0344c72…0ab6 · zkSync nonce 41 0xd2f60249…3aa5. Each = limiter.transferOwnership(timelock) + timelock.queue(acceptOwnership, eta);
+  etas 2026-10-11 ~11:20–11:26 UTC, so phase 1 must be executed before 2026-10-09 ~11:20 UTC. Phase 2 (execute) to be proposed after phase 1 lands.
