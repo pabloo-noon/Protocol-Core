@@ -94,6 +94,10 @@ zkSync the config txs cannot run before the upgrade tx.
            then `BROADCAST=true RENOUNCE=true npx hardhat run scripts/transfer-roles-to-safe.ts` to drop the deployer (irreversible; run
            once the Safes have confirmed they can call pause/unpause). Independent of the upgrade (roles live in proxy storage).
    [ ] 5c  zkSync: deploy Timelock(zkSync Safe, 48h) with zksolc 1.5.15, transferOwnership(timelock) on both ProxyAdmins (after 1a).
+   [ ] 5h  GenericTimelock in front of each BridgeRateLimiter (tracking: generic-timelock.md). Timelocks deployed 2026-10-05 on Base
+            0xF824…bAcB, HyperEVM 0xDeFC…B1D3, Citrea 0x6950…06E9, Bera 0x8B83…98a5 (Ethereum reuses 0x3685…9722); zkSync pending.
+            Hand-over = 2 Safe txs per chain (scripts/propose-limiter-timelock.ts). DECISION PENDING: it also delays blockOutbound /
+            limit lowering / resetInFlight by 2 days (no guardian role) — see the warning in generic-timelock.md.
    [ ] 5d  Ethereum enforced options toward zkSync (30165) and Sui (30378) are empty: front-end keeps passing extraOptions
            (>=120k toward zkSync, 500k toward Sui). Optional: setEnforcedOptions on ETH USN/sUSN for both eids.
    [ ] 5e  Front-end: vault wrappers depositWithPermit / *WithSlippageCheck are removed (0 on-chain calls ever).
