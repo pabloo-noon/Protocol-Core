@@ -57,8 +57,8 @@ ADD — routes per token (today a reader has to infer them)
 =====================================================================
 CHANGE
 =====================================================================
-  - Redeemer: the page shows 0xF5DEAfcdFbC21Cb1E558906d00A1Fdb4b56173e8; the audit found a live RedeemHandlerV2 at 0xCee6…4411 and a
-    newer deployment at 0xAb0c…9197 (full addresses in audit-2026-10-01/audit-ownership.md) — confirm which one is current and update.
+  - Redeemer: the page shows 0xF5DEAfcdFbC21Cb1E558906d00A1Fdb4b56173e8; the audit found a live RedeemHandlerV2 at 0xCee62389CB2A63901524D6924E84d0afCF44a411 and a
+    newer deployment at 0xAb0c423975B446e785E21B9b10F3B421c8ED9197 — confirm which one is current and update.
   - Timelock sentence "Base, Citrea, Bera each have Upgrade Timelock contracts": add HyperEVM (24h) and the addresses above.
 
 =====================================================================
