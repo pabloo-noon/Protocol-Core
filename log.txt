@@ -174,3 +174,19 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
   Ethereum nonce 349 0xed68741d…6a47 · Base nonce 7 0xb29f5743…3301 · HyperEVM nonce 6 0x9a8c3e60…743d · Citrea nonce 6 0xf2dec181…206f ·
   Bera nonce 6 0xe0344c72…0ab6 · zkSync nonce 41 0xd2f60249…3aa5. Each = limiter.transferOwnership(timelock) + timelock.queue(acceptOwnership, eta);
   etas 2026-10-11 ~11:20–11:26 UTC, so phase 1 must be executed before 2026-10-09 ~11:20 UTC. Phase 2 (execute) to be proposed after phase 1 lands.
+
+2026-10-06 ~12:20 UTC  Deleted the six phase-1 proposals against the 2-day timelocks from the Safe Transaction Services (signed DeleteRequest
+  by the proposer 0xcC24…b11f; HTTP 204 on eth, base, hyper, citrea, berachain, zksync; none had a signature).
+
+2026-10-06 ~12:30 UTC  GenericTimelockV2(owner = chain Safe, delay 4h, min 4h, max 48h) deployed on all 6 chains by 0x1738…D699, all verified:
+  Ethereum 0x398dCDdae394198E6f81d6d8f827CF93b60fB5AE tx 0xfdf0e09bebbf2719cbcb59f0f4e8425fc09e461ccdb03cfcb491222707b037b1
+  Base     0x77044C9C050BcFD80d1Ab42AA070bD3f65B32Ef2 tx 0x3738ee1bbf296de4cfd211a6dc9677ff78b4ac5fee76e100b578863762af238c
+  HyperEVM 0x60E29F3b7A787A2afFe1D7F61AA6b581D5065eF1 tx 0x5ad1e3ade27fa9c01b70a565f0b242df81b6d6ee09a929e8f0e7bb74805f3fb3
+  Citrea   0x8B83A9f5d422B062619aC0309Eab6D54566198a5 tx 0x7df3374b9f5e34c1778d28d4d0f029c3e4d5557f8a6e118dd128543b39b9426a
+  Bera     0x033fa0371A5888d0eBA7D903330Ad709c2c77c36 tx 0x62533df79d8f94243d4b8fe026c2dca618f4beb4818034812945e8644558ac3e
+  zkSync   0x0948aA7e855f250173A124C4eAAf1a8F540B071D tx 0xca0e23d59bd1a1aed89ef6238ac6c7167c0791006843a75903673d134fa8c124 (zksolc 1.5.15, verification request 111002 successful)
+  Post-deploy read on each: owner = Safe, delay 4h, MIN 4h, MAX 48h, pendingOwner 0. The 2-day GenericTimelocks deployed 5–6 Oct are superseded, unused.
+
+2026-10-06 12:40–12:41 UTC  Phase 1 re-proposed on all 6 Safes against the V2 timelocks (0/3 each):
+  Ethereum nonce 349 0x0a25bc29…c445 · Base nonce 7 0x686ce85c…91b5 · HyperEVM nonce 6 0x31d3cc82…74ac · Citrea nonce 6 0x799d8f2e…fd3e ·
+  Bera nonce 6 0x2e6c5beb…3c56 · zkSync nonce 41 0xde994d4c…1717. etas 2026-10-09 16:40–16:41 UTC; phase 1 must execute before 2026-10-09 ~12:41 UTC.

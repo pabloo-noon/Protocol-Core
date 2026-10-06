@@ -15,7 +15,7 @@
  *   npx hardhat run scripts/propose-limiter-timelock.ts                  dry run (JSON + simulations)
  *   PROPOSE=true npx hardhat run scripts/propose-limiter-timelock.ts     queue phase 1 in the Safes
  *   PHASE=2 PROPOSE=true npx hardhat run scripts/propose-limiter-timelock.ts
- * Env: CHAINS=…, TIMELOCK_<CHAIN> (else scripts/out/generic-timelocks.json), ETA_BUFFER (seconds), ETA_<CHAIN>.
+ * Env: CHAINS=…, TIMELOCK_<CHAIN> (else TIMELOCKS_FILE, default scripts/out/generic-timelocks-4h.json), ETA_BUFFER (seconds), ETA_<CHAIN>.
  */
 import { config as dotenvConfig } from 'dotenv';
 import { ethers } from 'ethers';
@@ -26,9 +26,9 @@ import { provider, proposeToSafe, tx, writeBatch, SAFE_SERVICE, Tx } from './lib
 dotenvConfig({ path: resolve(__dirname, '../.env') });
 const PROPOSE = process.env.PROPOSE === 'true';
 const PHASE = Number(process.env.PHASE ?? 1);
-const ETA_BUFFER = BigInt(process.env.ETA_BUFFER ?? 3 * 86400);
+const ETA_BUFFER = BigInt(process.env.ETA_BUFFER ?? 3 * 86400); // signing slack: phase 1 must execute before eta - delay
 const ONLY = process.env.CHAINS?.split(',').map((s) => s.trim().toLowerCase());
-const TL_FILE = resolve(__dirname, 'out/generic-timelocks.json');
+const TL_FILE = resolve(__dirname, process.env.TIMELOCKS_FILE ?? 'out/generic-timelocks-4h.json');
 
 const CHAINS = [
   { name: 'ethereum', chainId: 1, rpcs: [process.env.ETHEREUM_MAINNET_RPC_URL, 'https://eth.drpc.org'], safe: '0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f', limiter: '0xe8c94FA4FEdFa21B1d0D0Dd78E41bCE9d99d959F' },
@@ -91,7 +91,7 @@ async function main() {
       else if (PROPOSE) console.log('  no Safe service — import the JSON');
     }
   }
-  console.log(`\nWARNING: once the timelock owns a limiter, blockOutbound / lowering limits / resetInFlight on that chain also take the\nfull delay (MIN_DELAY is 2 days, hard-coded). The limiter stops being an emergency control. Decide before signing phase 1.`);
+  console.log(`\nNOTE: once the timelock owns a limiter, every limiter change (incl. blockOutbound / lowering limits / resetInFlight) takes the timelock delay (4h on the V2 deployments).`);
   if (problems) process.exit(1);
 }
 main().catch((e) => { console.error(e); process.exit(1); });

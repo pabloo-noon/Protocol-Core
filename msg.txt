@@ -92,26 +92,28 @@ Before 3a / 3c / 3f / 3h execute: block TAC + Sophon in the front-end and announ
 After everything: npx hardhat run scripts/verify-rollout.ts  (expects 0 FAIL), then one tiny test transfer per direction.
 
 =====================================================================
-STEP 6 — GenericTimelock in front of each BridgeRateLimiter (proposed 2026-10-06; generic-timelock.md)
+STEP 6 — GenericTimelockV2 (4h) in front of each BridgeRateLimiter (re-proposed 2026-10-06 12:41 UTC; generic-timelock.md)
 =====================================================================
-Phase 1 per Safe: limiter.transferOwnership(timelock) + timelock.queue(acceptOwnership, eta). Must be EXECUTED before 2026-10-09 ~11:20 UTC
-(eta - 2 days), otherwise queue reverts and the batch is re-proposed with a new eta. Phase 2 (timelock.execute) is proposed after phase 1 lands.
-WARNING: after phase 2 the limiter's emergency controls (blockOutbound, lowering limits, resetInFlight) also take 2 days.
+The earlier step-6 proposals (2-day timelocks) were deleted from the Safe services before any signature.
+Phase 1 per Safe: limiter.transferOwnership(timelockV2) + timelockV2.queue(acceptOwnership, eta). Execute phase 1 BEFORE 2026-10-09 ~12:41 UTC
+(eta − 4h); phase 2 (timelockV2.execute) is proposed after phase 1 lands and can be signed from the eta (2026-10-09 ~16:41 UTC) for 14 days.
+After phase 2 every limiter change, including blockOutbound / lowering limits, takes 4 hours.
 
-[Ethereum] 6-1. Limiter ownership -> timelock, queue acceptOwnership (nonce 349) — eta 2026-10-11 11:25:59 UTC
-https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0xed68741d327c247ea7e712681a6006386c4ec03cb07aa0a3e22f9537db3e6a47
+[Ethereum] 6-1. Limiter ownership -> GenericTimelockV2 0x398dCDdae394198E6f81d6d8f827CF93b60fB5AE, queue acceptOwnership (nonce 349) — eta 2026-10-09 16:40:59 UTC
+https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0x0a25bc295866d9cc6fa7438271e123de3c8165496509a4a09144b58f0f6ec445
 
-[Base] 6-1. Limiter ownership -> timelock, queue acceptOwnership (nonce 7) — eta 2026-10-11 11:26:11 UTC
-https://app.safe.global/transactions/tx?safe=base:0xf56d33ef52642ce226A566610A979DC8d954592D&id=multisig_0xf56d33ef52642ce226A566610A979DC8d954592D_0xb29f5743ce650854448d755d604f344b754139c0f29fa0c5dcde0b1952ef3301
+[Base] 6-1. Limiter ownership -> GenericTimelockV2 0x77044C9C050BcFD80d1Ab42AA070bD3f65B32Ef2, queue acceptOwnership (nonce 7) — eta 2026-10-09 16:41:13 UTC
+https://app.safe.global/transactions/tx?safe=base:0xf56d33ef52642ce226A566610A979DC8d954592D&id=multisig_0xf56d33ef52642ce226A566610A979DC8d954592D_0x686ce85cdd37b5f2ef893dc6e8a9302e17a9d46d63251d459a15e0cdb12a91b5
 
-[HyperEVM] 6-1. Limiter ownership -> timelock, queue acceptOwnership (nonce 6) — eta 2026-10-11 11:26:25 UTC
-https://app.safe.global/transactions/tx?safe=hyper-evm:0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8&id=multisig_0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8_0x9a8c3e60398b8605f1c7e9da725e89f69856a999fc1f446d1f09523bd76f743d
+[HyperEVM] 6-1. Limiter ownership -> GenericTimelockV2 0x60E29F3b7A787A2afFe1D7F61AA6b581D5065eF1, queue acceptOwnership (nonce 6) — eta 2026-10-09 16:41:24 UTC
+https://app.safe.global/transactions/tx?safe=hyper-evm:0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8&id=multisig_0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8_0x31d3cc829fdc2f3d48ce4ae37a6d9dfbc1d938be0bffe0b63a0428950a8a74ac
 
-[Citrea] 6-1. Limiter ownership -> timelock, queue acceptOwnership (nonce 6) — eta 2026-10-11 11:19:41 UTC
-https://safe.citrea.xyz/transactions/tx?safe=citrea-mainnet:0xB2aD758Ee2710527A28d906F9588938c2e5cFc80&id=multisig_0xB2aD758Ee2710527A28d906F9588938c2e5cFc80_0xf2dec1816f9d5813cffc8b45bceca9d609f3ad8551f8eadf518d64245547206f
+[Citrea] 6-1. Limiter ownership -> GenericTimelockV2 0x8B83A9f5d422B062619aC0309Eab6D54566198a5, queue acceptOwnership (nonce 6) — eta 2026-10-09 16:41:25 UTC
+https://safe.citrea.xyz/transactions/tx?safe=citrea-mainnet:0xB2aD758Ee2710527A28d906F9588938c2e5cFc80&id=multisig_0xB2aD758Ee2710527A28d906F9588938c2e5cFc80_0x799d8f2e0006fdaeee1c505a29c70d0cefce15e12e20f56d15cb500093d8fd3e
 
-[Bera] 6-1. Limiter ownership -> timelock, queue acceptOwnership (nonce 6) — eta 2026-10-11 11:26:26 UTC
-https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA7c9bB2038eF9a3C58&id=multisig_0x94E9f383b085D32973634EA7c9bB2038eF9a3C58_0xe0344c721e75e3cc8061c03cc692330a38905854c7ead883e7bb0ecc0a520ab6
+[Bera] 6-1. Limiter ownership -> GenericTimelockV2 0x033fa0371A5888d0eBA7D903330Ad709c2c77c36, queue acceptOwnership (nonce 6) — eta 2026-10-09 16:41:32 UTC
+https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA7c9bB2038eF9a3C58&id=multisig_0x94E9f383b085D32973634EA7c9bB2038eF9a3C58_0x2e6c5bebec12d140def7b0ee822129d2c7675d325db8b1b26c4022fd1c983c56
 
-[zkSync] 6-1. Limiter ownership -> timelock, queue acceptOwnership (nonce 41) — eta 2026-10-11 11:26:21 UTC
-https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0xd2f602495466db4b242e0da0156eb62c746e1042c8aa57e07977a6fa09ab3aa5
+[zkSync] 6-1. Limiter ownership -> GenericTimelockV2 0x0948aA7e855f250173A124C4eAAf1a8F540B071D, queue acceptOwnership (nonce 41) — eta 2026-10-09 16:41:36 UTC
+https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0xde994d4ccf030b5abb7861614c443112eed8ef2c98218590d6f07f58ef0a1717
+

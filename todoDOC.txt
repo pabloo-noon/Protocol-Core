@@ -5,7 +5,7 @@ DOCS TODO — https://docs.noon.capital/6.-resources/contract-addresses-and-orac
 ADD — new section "Bridge rate limiters"
 =====================================================================
 Every bridge route (LayerZero and Hyperlane) is capped at 4,000,000 tokens per route per 8-hour sliding window, inbound and
-outbound. One BridgeRateLimiter per chain, owned by the chain Safe.
+outbound. One BridgeRateLimiter per chain, owned by the chain's Generic Timelock V2 (4h) once the hand-over executes; until then by the chain Safe.
 
   Ethereum   0xe8c94FA4FEdFa21B1d0D0Dd78E41bCE9d99d959F   https://etherscan.io/address/0xe8c94FA4FEdFa21B1d0D0Dd78E41bCE9d99d959F
   zkSync Era 0xE69d7C7147B7ED370f28fedEd06FbAB0BD14455E   https://explorer.zksync.io/address/0xE69d7C7147B7ED370f28fedEd06FbAB0BD14455E
@@ -17,18 +17,21 @@ outbound. One BridgeRateLimiter per chain, owned by the chain Safe.
 =====================================================================
 ADD — timelocks on every chain (the page only lists the two Ethereum ones and a sentence for Base/Citrea/Bera)
 =====================================================================
-Upgrade Timelock = in front of the proxy admins (proxy upgrades). Generic Timelock = owner-queued operations, 2-day delay.
+Upgrade Timelock = in front of the proxy admins (proxy upgrades). Generic Timelock (V2) = owner of the BridgeRateLimiter on that chain,
+every limiter change is queued by the Safe and executable after 4 hours (min 4h, max 48h).
 
-  chain      Upgrade Timelock (delay)                                 Generic Timelock (2 days)
-  Ethereum   0xE5e412C212B4FBbF550A94e7BD5e83dB0B315A7F (48h)         0x36857EF0B10A61A68d58C29eE256990fa9699722
-  Base       0xA9BB96bb79492Aa64199f078362ECd069D565e85 (48h)         0xF8241FCca17e8fD91506DaA3f6FF87Fe3eeFbAcB
-  HyperEVM   0x73D59063212c1A3fD32882d46A84EFb37911550d (24h)         0xDeFC5bFca15C45fE71339714fFc108518B35B1D3
-  Citrea     0xf6f40baAFBCbB29855F4D9A29576B812E0B33fac (48h)         0x69507fece7289E940E440b3e6cFc535c7aF306E9
-  Bera       0xea84aC70f00f47ad6FBE51233AAE25799B9f0A02 (48h)         0x8B83A9f5d422B062619aC0309Eab6D54566198a5
-  zkSync Era none yet (proxies upgraded directly by the Safe)         0x3A3FB0727447E97ec944AE6D167fF7791B8992df
+  chain      Upgrade Timelock (delay)                                 Generic Timelock V2 (4h; owner of the limiter)
+  Ethereum   0xE5e412C212B4FBbF550A94e7BD5e83dB0B315A7F (48h)         0x398dCDdae394198E6f81d6d8f827CF93b60fB5AE
+  Base       0xA9BB96bb79492Aa64199f078362ECd069D565e85 (48h)         0x77044C9C050BcFD80d1Ab42AA070bD3f65B32Ef2
+  HyperEVM   0x73D59063212c1A3fD32882d46A84EFb37911550d (24h)         0x60E29F3b7A787A2afFe1D7F61AA6b581D5065eF1
+  Citrea     0xf6f40baAFBCbB29855F4D9A29576B812E0B33fac (48h)         0x8B83A9f5d422B062619aC0309Eab6D54566198a5
+  Bera       0xea84aC70f00f47ad6FBE51233AAE25799B9f0A02 (48h)         0x033fa0371A5888d0eBA7D903330Ad709c2c77c36
+  zkSync Era none yet (proxies upgraded directly by the Safe)         0x0948aA7e855f250173A124C4eAAf1a8F540B071D
 
-  Note: the Generic Timelocks on Base / HyperEVM / Citrea / Bera / zkSync were deployed 5–6 Oct 2026 and are not yet in
-  front of anything; publish them once the limiter hand-over decision is taken (generic-timelock.md).
+  Note: the Ethereum 2-day Generic Timelock 0x36857EF0B10A61A68d58C29eE256990fa9699722 already on the page stays listed as is
+  (it is not the limiter owner). The V2 addresses above become the limiter owners once the hand-over executes (generic-timelock.md);
+  publish them together with the limiter section. The 2-day timelocks deployed on 5–6 Oct on Base/HyperEVM/Citrea/Bera/zkSync are
+  superseded and must NOT be published.
 
 =====================================================================
 ADD — Safes (multisigs) per chain
@@ -57,8 +60,7 @@ ADD — routes per token (today a reader has to infer them)
 =====================================================================
 CHANGE
 =====================================================================
-  - Redeemer: the page shows 0xF5DEAfcdFbC21Cb1E558906d00A1Fdb4b56173e8; the audit found a live RedeemHandlerV2 at 0xCee62389CB2A63901524D6924E84d0afCF44a411 and a
-    newer deployment at 0xAb0c423975B446e785E21B9b10F3B421c8ED9197 — confirm which one is current and update.
+  - Redeemer: the page should be 0xAb0c423975B446e785E21B9b10F3B421c8ED9197
   - Timelock sentence "Base, Citrea, Bera each have Upgrade Timelock contracts": add HyperEVM (24h) and the addresses above.
 
 =====================================================================
