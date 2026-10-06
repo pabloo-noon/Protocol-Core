@@ -19,9 +19,9 @@ Goal: make every change to a BridgeRateLimiter (limits, outbound block/unblock, 
 | HyperEVM | `0xDeFC5bFca15C45fE71339714fFc108518B35B1D3` | `0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8` | [0xf352c858…6cfe](https://hyperevmscan.io/tx/0xf352c858dd027ee4c4e994646b64b00d0c1d6186b05bca56e22e95172f1f6cfe) | [hyperevmscan](https://hyperevmscan.io/address/0xDeFC5bFca15C45fE71339714fFc108518B35B1D3#code) |
 | Citrea | `0x69507fece7289E940E440b3e6cFc535c7aF306E9` | `0xB2aD758Ee2710527A28d906F9588938c2e5cFc80` | [0x09b3431a…5d82](https://explorer.mainnet.citrea.xyz/tx/0x09b3431a55d215ecf219177a20d1833118d5a437e62b1f342a1c2f0632745d82) | [citrea explorer](https://explorer.mainnet.citrea.xyz/address/0x69507fece7289E940E440b3e6cFc535c7aF306E9#code) |
 | Bera | `0x8B83A9f5d422B062619aC0309Eab6D54566198a5` | `0x94E9f383b085D32973634EA7c9bB2038eF9a3C58` | [0xd2613ef3…b00c](https://berascan.com/tx/0xd2613ef38e6c2b538a77d74bdbd692c2e5a080268fca80383c0ede7b134db00c) | [berascan](https://berascan.com/address/0x8B83A9f5d422B062619aC0309Eab6D54566198a5#code) |
-| zkSync | not deployed yet | `0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263` | `BROADCAST=true ZKSOLC_VERSION=1.5.15 npx hardhat run scripts/deploy-generic-timelocks.ts --network zksync` | — |
+| zkSync | `0x3A3FB0727447E97ec944AE6D167fF7791B8992df` | `0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263` | [0x79cdaaeb…9509](https://explorer.zksync.io/tx/0x79cdaaeb4a3284b189cfdf712ac9f719fb3577923fbe9d6ec517986972ed9509) | pending manual verification (zksolc 1.5.15) |
 
-Deployed 2026-10-05 by `0x173806021b18c4E60170e412DC88F991eB00D699`. Post-deploy read on every chain: owner = Safe, delay 2d, pendingOwner 0.
+Deployed 2026-10-05 (EVM chains) and 2026-10-06 11:01 UTC (zkSync, zksolc 1.5.15; the hardhat-zksync deployment saver crashed on a BigInt AFTER the deploy tx was sent, the contract is live) by `0x173806021b18c4E60170e412DC88F991eB00D699`. Post-deploy read on every chain: owner = Safe, delay 2d, pendingOwner 0.
 Explorer verification: the in-script `hardhat verify` call fails when spawned from inside `hardhat run` (inherits
 `HARDHAT_NETWORK`); run from a plain shell with `env -u HARDHAT_NETWORK npx hardhat verify --network <net> …` — all four
 reported "already verified" on 2026-10-06. Record of record: `scripts/out/generic-timelocks.json`.
@@ -52,7 +52,7 @@ Both calls are `onlyOwner` on the timelock, so both are Safe transactions. Statu
 | HyperEVM | — | — | — | — | — |
 | Citrea | — | — | — | — | — |
 | Bera | — | — | — | — | — |
-| zkSync | (timelock not deployed) | — | — | — | — |
+| zkSync | — | — | — | — | — |
 
 Commands:
 ```

@@ -1,0 +1,69 @@
+DOCS TODO — https://docs.noon.capital/6.-resources/contract-addresses-and-oracles
+(what to add / change on the page after the October 2026 bridge upgrade; everything below is live and verified on chain)
+
+=====================================================================
+ADD — new section "Bridge rate limiters"
+=====================================================================
+Every bridge route (LayerZero and Hyperlane) is capped at 4,000,000 tokens per route per 8-hour sliding window, inbound and
+outbound. One BridgeRateLimiter per chain, owned by the chain Safe.
+
+  Ethereum   0xe8c94FA4FEdFa21B1d0D0Dd78E41bCE9d99d959F   https://etherscan.io/address/0xe8c94FA4FEdFa21B1d0D0Dd78E41bCE9d99d959F
+  zkSync Era 0xE69d7C7147B7ED370f28fedEd06FbAB0BD14455E   https://explorer.zksync.io/address/0xE69d7C7147B7ED370f28fedEd06FbAB0BD14455E
+  Base       0xEFff8C4260aF5DA5eB26194CB45407f497756db7   https://basescan.org/address/0xEFff8C4260aF5DA5eB26194CB45407f497756db7
+  HyperEVM   0x77044C9C050BcFD80d1Ab42AA070bD3f65B32Ef2   https://hyperevmscan.io/address/0x77044C9C050BcFD80d1Ab42AA070bD3f65B32Ef2
+  Citrea     0xC79A424a9FB6DD94cD54715b97F5D0703CEDE815   https://explorer.mainnet.citrea.xyz/address/0xC79A424a9FB6DD94cD54715b97F5D0703CEDE815
+  Bera       0x51A30E647D33A044967FA3DBb04d6ED6F45455F6   https://berascan.com/address/0x51A30E647D33A044967FA3DBb04d6ED6F45455F6
+
+=====================================================================
+ADD — timelocks on every chain (the page only lists the two Ethereum ones and a sentence for Base/Citrea/Bera)
+=====================================================================
+Upgrade Timelock = in front of the proxy admins (proxy upgrades). Generic Timelock = owner-queued operations, 2-day delay.
+
+  chain      Upgrade Timelock (delay)                                 Generic Timelock (2 days)
+  Ethereum   0xE5e412C212B4FBbF550A94e7BD5e83dB0B315A7F (48h)         0x36857EF0B10A61A68d58C29eE256990fa9699722
+  Base       <full address in addresses.md, 0xA9BB…5e85> (48h)        0xF8241FCca17e8fD91506DaA3f6FF87Fe3eeFbAcB
+  HyperEVM   0x73D59063212c1A3fD32882d46A84EFb37911550d (24h)         0xDeFC5bFca15C45fE71339714fFc108518B35B1D3
+  Citrea     <full address in addresses.md, 0xf6f4…3fac> (48h)        0x69507fece7289E940E440b3e6cFc535c7aF306E9
+  Bera       0xea84aC70f00f47ad6FBE51233AAE25799B9f0A02 (48h)         0x8B83A9f5d422B062619aC0309Eab6D54566198a5
+  zkSync Era none yet (proxies upgraded directly by the Safe)         0x3A3FB0727447E97ec944AE6D167fF7791B8992df
+
+  Note: the Generic Timelocks on Base / HyperEVM / Citrea / Bera / zkSync were deployed 5–6 Oct 2026 and are not yet in
+  front of anything; publish them once the limiter hand-over decision is taken (generic-timelock.md).
+
+=====================================================================
+ADD — Safes (multisigs) per chain
+=====================================================================
+  Ethereum   0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f   3 of 6
+  zkSync Era 0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263   3 of 4
+  Base       0xf56d33ef52642ce226A566610A979DC8d954592D   3 of 5
+  HyperEVM   0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8   3 of 5
+  Citrea     0xB2aD758Ee2710527A28d906F9588938c2e5cFc80   3 of 5
+  Bera       0x94E9f383b085D32973634EA7c9bB2038eF9a3C58   3 of 5
+
+=====================================================================
+ADD — Sui (page lists Sui only under oracles / operations wallets)
+=====================================================================
+  sUSN OFT object   0xab496ed0068cba592901b15cf0192ad366c2634fae3a75eb9632cfa5bdaf567e
+  sUSN OFT package  0xa356ca2010fcdf44d6cecfcecf18b73c32188d361e39dff3a96ac8de0dec7b1b
+  coin type         0x0a672389b7b73df60d40666ac9545433d59d3128086b9e3a425a66bbffdf4dc5::susn::SUSN
+
+=====================================================================
+ADD — routes per token (today a reader has to infer them)
+=====================================================================
+  USN   Ethereum, zkSync Era (LayerZero + Hyperlane), Starknet (Hyperlane)
+  sUSN  Ethereum, zkSync Era (LayerZero + Hyperlane), Base, HyperEVM, Citrea, Bera, Starknet (Hyperlane), Sui (LayerZero)
+  LayerZero: 3 required DVNs on every live leg (Horizen, Frax, LayerZero Labs on ETH<->zkSync; Horizen, Nansen, LayerZero Labs on ETH<->Sui).
+
+=====================================================================
+CHANGE
+=====================================================================
+  - Redeemer: the page shows 0xF5DEAfcdFbC21Cb1E558906d00A1Fdb4b56173e8; the live RedeemHandlerV2 found on chain is 0xCee6…4411 with a
+    newer deployment at 0xAb0c…9197 — confirm which one is current and update.
+  - Timelock sentence "Base, Citrea, Bera each have Upgrade Timelock contracts": add HyperEVM (24h) and the addresses above.
+
+=====================================================================
+ANNOTATE deprecated chains
+=====================================================================
+  - Sophon and TAC: add "routes closed on 1 October 2026: the remote tokens on Ethereum, zkSync, Base and HyperEVM point to a dead
+    address, limits are 1 wei, and Starknet unenrolled both on 2 October. Tokens on Sophon/TAC can no longer bridge."
+  - Flare: correctly absent, keep it that way (both Flare OFTs have no peers and 0 supply).

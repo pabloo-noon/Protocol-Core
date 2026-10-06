@@ -163,3 +163,9 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
   Verified (starknet_call): domains() = [1, 324] on both; routers(239) / routers(50104) unset; routers(1) and routers(324) unchanged
   (ETH USN/sUSN, zkSync USN/sUSN); owner unchanged. The TAC/Sophon closure is now complete at every end (ETH, zkSync, Base,
   HyperEVM dEaD + 1 wei; Starknet unenrolled). Still open on Starknet: HyperEVM asymmetry (4b-7) and router ownership -> multisig (4b-4).
+
+2026-10-06 11:01:10 UTC  [zkSync] GenericTimelock deployed: 0x3A3FB0727447E97ec944AE6D167fF7791B8992df (owner zkSync Safe 0x15d9…a263, delay 2d, pendingOwner 0, MIN_DELAY 2d)
+  tx https://explorer.zksync.io/tx/0x79cdaaeb4a3284b189cfdf712ac9f719fb3577923fbe9d6ec517986972ed9509 (zksolc 1.5.15 build; deployer 0x1738…D699)
+  Also deployed 2026-10-05: Base 0xF8241FCca17e8fD91506DaA3f6FF87Fe3eeFbAcB, HyperEVM 0xDeFC5bFca15C45fE71339714fFc108518B35B1D3,
+  Citrea 0x69507fece7289E940E440b3e6cFc535c7aF306E9, Bera 0x8B83A9f5d422B062619aC0309Eab6D54566198a5 (all verified); Ethereum reuses 0x36857EF0…9722.
+  Nothing handed over yet: limiters still owned by the Safes (decision on the 2-day emergency delay pending, generic-timelock.md).
