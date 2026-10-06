@@ -20,6 +20,8 @@ import * as fs from 'fs';
 import { resolve } from 'path';
 import { spawnSync } from 'child_process';
 import { provider } from './lib/safe-propose';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const hre = require('hardhat');
 
 dotenvConfig({ path: resolve(__dirname, '../.env') });
 const BROADCAST = process.env.BROADCAST === 'true';
@@ -58,7 +60,7 @@ function verify(net: string, addr: string, safe: string) {
 }
 
 async function main() {
-  const hreNet = process.env.HARDHAT_NETWORK;
+  const hreNet = hre.network?.name ?? process.env.HARDHAT_NETWORK;
   const out = load();
   const pk = process.env.DEPLOYER_WALLET_PRIVATE_KEY;
   if (!pk) throw new Error('DEPLOYER_WALLET_PRIVATE_KEY not set');
@@ -85,7 +87,8 @@ async function main() {
 
     let addr: string, txHash: string;
     if (c.zk) {
-      const hre = await import('hardhat');
+      const zv = (process.env.ZKSOLC_VERSION || '1.5.7').split('.').map(Number);
+      if (zv[0] < 1 || (zv[0] === 1 && (zv[1] < 5 || (zv[1] === 5 && zv[2] < 15)))) throw new Error('set ZKSOLC_VERSION=1.5.15 — builds below 1.5.15 cannot be verified on the zkSync explorer');
       const { Deployer } = await import('@matterlabs/hardhat-zksync-deploy');
       const { Wallet } = await import('zksync-ethers');
       const deployer = new Deployer(hre as any, new Wallet(pk));
@@ -101,10 +104,11 @@ async function main() {
     }
     console.log(`  deployed ${addr} (tx ${txHash})`);
     const ok = await check(p, addr, c.safe);
-    out[c.name] = { timelock: addr, safe: c.safe, delay: Number(DELAY), tx: txHash, verified: false };
+    out[c.name] = { timelock: addr, safe: c.safe, delay: Number(DELAY), tx: txHash };
     save(out);
     if (!ok) throw new Error('post-deploy check failed');
-    if (VERIFY) { await new Promise((r) => setTimeout(r, 30_000)); verify(c.net, addr, c.safe); out[c.name].verified = true; save(out); }
+    if (VERIFY && !c.zk) { await new Promise((r) => setTimeout(r, 30_000)); verify(c.net, addr, c.safe); console.log('  (if the spawned verify fails with "doesn\'t recognize chain", re-run it from a plain shell: env -u HARDHAT_NETWORK npx hardhat verify --network ' + c.net + ' ...)'); }
+    if (VERIFY && c.zk) console.log('  zkSync: verify by POSTing the standard JSON to https://zksync2-mainnet-explorer.zksync.io/contract_verification (compilerZksolcVersion v1.5.15, compilerSolcVersion zkVM-0.8.28-1.0.1), as done for the audited impls — the hardhat plugin sends sourceCode as a string and is rejected.');
   }
   console.log(`\n→ ${OUT}`);
 }
