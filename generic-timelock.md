@@ -33,12 +33,12 @@ against the 2-day timelocks were deleted from the Safe services, HTTP 204, befor
 
 | chain | phase 1 proposed | phase 1 executed | eta (phase 1 must execute before eta − 4h = 2026-10-07 ~08:52 UTC) | phase 2 proposed | phase 2 executed |
 |---|---|---|---|---|---|
-| Ethereum | nonce 349, safeTxHash 0xadff9a0ccf42a284ff0995cd708a6ee573b55d5bd38f015b82364b96fc1a1283 | — | 1791377519 = 2026-10-07 12:51:59 UTC | — | — |
-| Base | nonce 7, safeTxHash 0xf07c38570f9b041a689a74f1ad40f64f10f65a458727802836d5205f2bd11976 | — | 1791377535 = 2026-10-07 12:52:15 UTC | — | — |
-| HyperEVM | nonce 6, safeTxHash 0xc17c1fa137126f5308c92311b042be2015b26e19602bd944dd8b881625985849 | — | 1791377543 = 2026-10-07 12:52:23 UTC | — | — |
-| Citrea | nonce 6, safeTxHash 0x23edc1cdc769ca3d410dac49bc75f2bbad20d141f666e024a20dccd6ab64cee0 | — | 1791377545 = 2026-10-07 12:52:25 UTC | — | — |
-| Bera | nonce 6, safeTxHash 0x00a2df9c15c0c5474df6b0ab187910e062871ca55d618095027fa04193b1b94e | — | 1791377550 = 2026-10-07 12:52:30 UTC | — | — |
-| zkSync | nonce 41, safeTxHash 0x3519de40d7417604123cee6beb1f115100c88f824cd592bbdff9ba3c4fa8078d | — | 1791377541 = 2026-10-07 12:52:21 UTC | — | — |
+| Ethereum | nonce 349, safeTxHash 0xadff9a0ccf42a284ff0995cd708a6ee573b55d5bd38f015b82364b96fc1a1283 | 2026-10-06 16:52:23 UTC, tx 0x8aee9871… | 1791377519 = 2026-10-07 12:51:59 UTC | nonce 350, safeTxHash 0xd0a718b240479c2f2d93b6cbf655f5b5f9bcbef2f5d6ad733c3a0772800d1c1d (signable from the eta) | — |
+| Base | nonce 7, safeTxHash 0xf07c38570f9b041a689a74f1ad40f64f10f65a458727802836d5205f2bd11976 | 2026-10-06 16:52:43 UTC, tx 0x871e4237… | 1791377535 = 2026-10-07 12:52:15 UTC | nonce 8, safeTxHash 0x0ce335e1000d383781cb3ebc7f05c380fdea4a460803ec1acfc9d82b46d5c05c (signable from the eta) | — |
+| HyperEVM | nonce 6, safeTxHash 0xc17c1fa137126f5308c92311b042be2015b26e19602bd944dd8b881625985849 | 2026-10-06 16:54:00 UTC, tx 0x1359b803… | 1791377543 = 2026-10-07 12:52:23 UTC | nonce 7, safeTxHash 0xc59708c1693963804138bbbf392d4cebae4750647e215a8b6b48d1ae8cacb717 (signable from the eta) | — |
+| Citrea | nonce 6, safeTxHash 0x23edc1cdc769ca3d410dac49bc75f2bbad20d141f666e024a20dccd6ab64cee0 | 2026-10-06 16:54:57 UTC, tx 0x5600d323… | 1791377545 = 2026-10-07 12:52:25 UTC | nonce 7, safeTxHash 0xada44c62fe475e79a9db2d797621336a59dc06718f0c1987ae027cb8f75df1d7 (signable from the eta) | — |
+| Bera | nonce 6, safeTxHash 0x00a2df9c15c0c5474df6b0ab187910e062871ca55d618095027fa04193b1b94e | 2026-10-06 16:55:32 UTC, tx 0x3347b706… | 1791377550 = 2026-10-07 12:52:30 UTC | nonce 7, safeTxHash 0x02fa806724c664f56c82cb50b0260f5176d53c04d86694d2625fb316c2d61717 (signable from the eta) | — |
+| zkSync | nonce 41, safeTxHash 0x3519de40d7417604123cee6beb1f115100c88f824cd592bbdff9ba3c4fa8078d | 2026-10-06 16:56:36 UTC, tx 0x63e89c0f… | 1791377541 = 2026-10-07 12:52:21 UTC | nonce 42, safeTxHash 0x390864884817b46527f4328b6a65f1cbb03a3b8c83db0ac06a5553ba35b0e663 (signable from the eta) | — |
 
 Safe links: see msg.txt STEP 6.
 

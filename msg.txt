@@ -117,3 +117,24 @@ https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA
 [zkSync] 6-1. Limiter ownership -> GenericTimelockV2 0x0948aA7e855f250173A124C4eAAf1a8F540B071D, queue acceptOwnership (nonce 41) — eta 2026-10-07 12:52:21 UTC
 https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x3519de40d7417604123cee6beb1f115100c88f824cd592bbdff9ba3c4fa8078d
 
+
+PHASE 2 (proposed 2026-10-06 ~17:00 UTC; sign/execute from the eta, 2026-10-07 ~12:52 UTC, until 2026-10-21):
+
+[Ethereum] 6-2. timelockV2.execute(acceptOwnership) -> limiter owner = timelockV2 (nonce 350)
+https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0xd0a718b240479c2f2d93b6cbf655f5b5f9bcbef2f5d6ad733c3a0772800d1c1d
+
+[Base] 6-2. timelockV2.execute(acceptOwnership) -> limiter owner = timelockV2 (nonce 8)
+https://app.safe.global/transactions/tx?safe=base:0xf56d33ef52642ce226A566610A979DC8d954592D&id=multisig_0xf56d33ef52642ce226A566610A979DC8d954592D_0x0ce335e1000d383781cb3ebc7f05c380fdea4a460803ec1acfc9d82b46d5c05c
+
+[HyperEVM] 6-2. timelockV2.execute(acceptOwnership) -> limiter owner = timelockV2 (nonce 7)
+https://app.safe.global/transactions/tx?safe=hyper-evm:0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8&id=multisig_0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8_0xc59708c1693963804138bbbf392d4cebae4750647e215a8b6b48d1ae8cacb717
+
+[Citrea] 6-2. timelockV2.execute(acceptOwnership) -> limiter owner = timelockV2 (nonce 7)
+https://safe.citrea.xyz/transactions/tx?safe=citrea-mainnet:0xB2aD758Ee2710527A28d906F9588938c2e5cFc80&id=multisig_0xB2aD758Ee2710527A28d906F9588938c2e5cFc80_0xada44c62fe475e79a9db2d797621336a59dc06718f0c1987ae027cb8f75df1d7
+
+[Bera] 6-2. timelockV2.execute(acceptOwnership) -> limiter owner = timelockV2 (nonce 7)
+https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA7c9bB2038eF9a3C58&id=multisig_0x94E9f383b085D32973634EA7c9bB2038eF9a3C58_0x02fa806724c664f56c82cb50b0260f5176d53c04d86694d2625fb316c2d61717
+
+[zkSync] 6-2. timelockV2.execute(acceptOwnership) -> limiter owner = timelockV2 (nonce 42)
+https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x390864884817b46527f4328b6a65f1cbb03a3b8c83db0ac06a5553ba35b0e663
+
