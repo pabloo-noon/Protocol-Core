@@ -26,7 +26,7 @@ every limiter change is queued by the Safe and executable after 4 hours (min 4h,
   HyperEVM   0x73D59063212c1A3fD32882d46A84EFb37911550d (24h)         0x60E29F3b7A787A2afFe1D7F61AA6b581D5065eF1
   Citrea     0xf6f40baAFBCbB29855F4D9A29576B812E0B33fac (48h)         0x8B83A9f5d422B062619aC0309Eab6D54566198a5
   Bera       0xea84aC70f00f47ad6FBE51233AAE25799B9f0A02 (48h)         0x033fa0371A5888d0eBA7D903330Ad709c2c77c36
-  zkSync Era none yet (proxies upgraded directly by the Safe)         0x0948aA7e855f250173A124C4eAAf1a8F540B071D
+  zkSync Era 0x6E7FD7751649993a8C01837Ab7f035d21E6f2Ace (48h; from Safe nonce 43)   0x0948aA7e855f250173A124C4eAAf1a8F540B071D
 
   Note: the Ethereum 2-day Generic Timelock 0x36857EF0B10A61A68d58C29eE256990fa9699722 already on the page stays listed as is
   (it is not the limiter owner). The V2 addresses above become the limiter owners once the hand-over executes (generic-timelock.md);

@@ -74,8 +74,7 @@ zkSync the config txs cannot run before the upgrade tx.
    [ ] 4b-6 ETH Safe: setEnforcedOptions USN + sUSN (30165, SEND, 120k) and sUSN (30378, SEND, 500k) so delivery no longer
             depends on the front-end's extraOptions.
    [ ] 4b-7 HyperEVM Safe: registerHyperlaneRemoteToken(358974494, 0x…dEaD) on sUSN (Starknet does not enroll HyperEVM) — or enroll it on Starknet.
-   [ ] 4b-8 Fold into 5c (zkSync timelock batch): grantRole(BLACKLIST_MANAGER_ROLE, Safe) on USN + sUSN (held by nobody today),
-            setSendLibrary/setReceiveLibrary -> ULN302 for both (currently default-lib).
+   [~] 4b-8 Folded into zkSync nonce 43 (see 5c): grantRole(BLACKLIST_MANAGER_ROLE, Safe) on USN + sUSN, setSendLibrary/setReceiveLibrary -> ULN302.
    [ ] 4b-9 Safe signer diversification: 0xe45B…42D0 + 0x09CE…3799 are on all 8 Safes; with 0x7b11…be37 or 0x8B36…aD01 three keys
             clear threshold everywhere. Add chain-unique signers on Ethereum and zkSync; consider a guard on Ethereum.
    [ ] 4b-10 Hot keys on Ethereum: MINTER_ROLE EOA 0x3769…76AE (MinterHandlerV2), treasury = sole APPROVER EOA 0xFeD8…f14E
@@ -93,7 +92,8 @@ zkSync the config txs cannot run before the upgrade tx.
            scripts/transfer-roles-to-safe.ts: grantRole(both, Safe) from the deployer [done 2026-10-01, tx hashes in section 3],
            then `BROADCAST=true RENOUNCE=true npx hardhat run scripts/transfer-roles-to-safe.ts` to drop the deployer (irreversible; run
            once the Safes have confirmed they can call pause/unpause). Independent of the upgrade (roles live in proxy storage).
-   [ ] 5c  zkSync: deploy Timelock(zkSync Safe, 48h) with zksolc 1.5.15, transferOwnership(timelock) on both ProxyAdmins (after 1a).
+   [~] 5c  zkSync: Timelock(zkSync Safe, 48h) deployed 2026-10-07 at 0x6E7FD7751649993a8C01837Ab7f035d21E6f2Ace (verified); Safe nonce 43 proposed = transferOwnership on both ProxyAdmins
+            + BLACKLIST_MANAGER to the Safe + pin ULN302 libs (4b-8 folded in). Awaiting 3 signatures (timelock-log.txt section 5).
    [ ] 5h  GenericTimelock in front of each BridgeRateLimiter (tracking: generic-timelock.md). Timelocks deployed 2026-10-05 on Base
             0xF824…bAcB, HyperEVM 0xDeFC…B1D3, Citrea 0x6950…06E9, Bera 0x8B83…98a5 (Ethereum reuses 0x3685…9722); zkSync pending.
             Hand-over = 2 Safe txs per chain (scripts/propose-limiter-timelock.ts). DECISION PENDING: it also delays blockOutbound /

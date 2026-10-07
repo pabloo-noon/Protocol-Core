@@ -194,3 +194,6 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
 2026-10-06 12:52 UTC  Phase 1 re-proposed again with eta = now + 24h (ETA_BUFFER 20h) after deleting the 12:41 proposals (HTTP 204, unsigned):
   Ethereum nonce 349 0xadff9a0c…1283 · Base nonce 7 0xf07c3857…1976 · HyperEVM nonce 6 0xc17c1fa1…5849 · Citrea nonce 6 0x23edc1cd…cee0 ·
   Bera nonce 6 0x00a2df9c…b94e · zkSync nonce 41 0x3519de40…078d. etas 2026-10-07 12:51–12:52 UTC; phase 1 must execute before 2026-10-07 ~08:52 UTC.
+
+2026-10-07  [zkSync] 48h upgrade Timelock deployed 0x6E7FD7751649993a8C01837Ab7f035d21E6f2Ace (tx 0x9f1ed3ecba5c46949694d3a148b890df73efe89607ba8c551c96200ecc72cc2e, owner Safe, verified) and Safe nonce 43 proposed:
+  both ProxyAdmins -> timelock, BLACKLIST_MANAGER_ROLE -> Safe on USN + sUSN, ULN302 send/receive libs pinned for both. safeTxHash 0x38087d8c7f2c1503e74df227b412015846eb6c3a46de13ea4bf36823927480c4. (timelock-log.txt section 5)

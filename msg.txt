@@ -138,3 +138,10 @@ https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA
 [zkSync] 6-2. timelockV2.execute(acceptOwnership) -> limiter owner = timelockV2 (nonce 42)
 https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x390864884817b46527f4328b6a65f1cbb03a3b8c83db0ac06a5553ba35b0e663
 
+
+=====================================================================
+STEP 7 — zkSync: 48h upgrade Timelock in front of both ProxyAdmins + blacklist role + pin ULN302 libs (proposed 2026-10-07)
+=====================================================================
+[zkSync] 7. ProxyAdmin(USN) + ProxyAdmin(sUSN) -> Timelock 0x6E7FD7751649993a8C01837Ab7f035d21E6f2Ace (48h), grant BLACKLIST_MANAGER to the Safe, pin send/receive libs (nonce 43)
+https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x38087d8c7f2c1503e74df227b412015846eb6c3a46de13ea4bf36823927480c4
+Note: zkSync nonce 42 (limiter timelock phase 2) executes first, then 43.

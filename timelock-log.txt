@@ -69,3 +69,16 @@ is Safe -> timelockV2.queue(...) -> 4h -> Safe -> timelockV2.execute(...).
 2026-10-06 12:52  phase 1 re-proposed against V2 with eta = now + 24h.
 2026-10-06 16:52–16:57  phase 1 EXECUTED on all 6 chains (section 2).
 2026-10-06 ~17:00  phase 2 PROPOSED on all 6 chains (section 3).
+
+=====================================================================
+5. zkSync UPGRADE TIMELOCK (contracts/periphery/Timelock.sol, 48h) in front of both ProxyAdmins — deployed + proposed 2026-10-07
+=====================================================================
+  Timelock 0x6E7FD7751649993a8C01837Ab7f035d21E6f2Ace  owner zkSync Safe 0x15d9…a263, delay 48h (MIN 24h / MAX 48h), verified (zksolc 1.5.15)
+  deploy tx https://explorer.zksync.io/tx/0x9f1ed3ecba5c46949694d3a148b890df73efe89607ba8c551c96200ecc72cc2e
+  Safe batch (nonce 43, 0/3): safeTxHash 0x38087d8c7f2c1503e74df227b412015846eb6c3a46de13ea4bf36823927480c4
+    https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x38087d8c7f2c1503e74df227b412015846eb6c3a46de13ea4bf36823927480c4
+    [0] ProxyAdmin(USN 0x5a82…6F11).transferOwnership(timelock)      [1] ProxyAdmin(sUSN 0x5130…decc).transferOwnership(timelock)
+    [2] USN.grantRole(BLACKLIST_MANAGER_ROLE, Safe)                   [3] sUSN.grantRole(BLACKLIST_MANAGER_ROLE, Safe)
+    [4-7] endpoint.setSendLibrary / setReceiveLibrary(USN | sUSN, 30101, ULN302 0x07fD…E12c / 0x0483…59e1, grace 0)  (pin the default libs)
+  All 8 calls simulate from the Safe. After execution every zkSync proxy upgrade is Safe -> scheduleUpgrade -> 48h -> executeUpgrade, like the other chains.
+  executed: —
