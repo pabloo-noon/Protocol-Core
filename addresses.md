@@ -96,6 +96,8 @@ Deployer for every implementation/limiter: `0x173806021b18c4E60170e412DC88F991eB
 | sUSN ProxyAdmin                                              | `0x5130C9cd9e85B4a95F9b44c7Eb8667106e8fdecc`                                                                                           |
 | Safe (owns ProxyAdmins directly — no timelock; 3-of-4)       | `0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263`                                                                                           |
 | **BridgeRateLimiter**                                        | [`0xE69d7C7147B7ED370f28fedEd06FbAB0BD14455E`](https://explorer.zksync.io/address/0xE69d7C7147B7ED370f28fedEd06FbAB0BD14455E#contract) |
+| Upgrade Timelock (48h; owns both ProxyAdmins once Safe nonce 43 executes) | `0x6E7FD7751649993a8C01837Ab7f035d21E6f2Ace` |
+| Generic Timelock V2 (4h; limiter owner once phase 2 executes) | `0x0948aA7e855f250173A124C4eAAf1a8F540B071D` |
 | **USN new impl** (periphery/USNOFTHyperlane; no pause, not Pausable) | [`0xb00B492099323E386dFD1E014850Ca16396E8C22`](https://explorer.zksync.io/address/0xb00B492099323E386dFD1E014850Ca16396E8C22#contract) |
 | **sUSN new impl** (remote/StakedUSNOFTHyperlane; adds pause) | [`0x8B9E886B6850615911c61a7cd10c9C6630d1A03d`](https://explorer.zksync.io/address/0x8B9E886B6850615911c61a7cd10c9C6630d1A03d#contract) |
 | USN old impl                                                 | `0xa5b228237bEf9bC804D8d6E7c76d0853a406bf34`                                                                                           |

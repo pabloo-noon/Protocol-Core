@@ -75,10 +75,9 @@ is Safe -> timelockV2.queue(...) -> 4h -> Safe -> timelockV2.execute(...).
 =====================================================================
   Timelock 0x6E7FD7751649993a8C01837Ab7f035d21E6f2Ace  owner zkSync Safe 0x15d9…a263, delay 48h (MIN 24h / MAX 48h), verified (zksolc 1.5.15)
   deploy tx https://explorer.zksync.io/tx/0x9f1ed3ecba5c46949694d3a148b890df73efe89607ba8c551c96200ecc72cc2e
-  Safe batch (nonce 43, 0/3): safeTxHash 0x38087d8c7f2c1503e74df227b412015846eb6c3a46de13ea4bf36823927480c4
-    https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x38087d8c7f2c1503e74df227b412015846eb6c3a46de13ea4bf36823927480c4
+  Safe batch (nonce 43, 0/3): safeTxHash 0x3c9ce026d05d94f64a98cd98bb830b0a4db83f895be3053e4230d0d631e3de27  (re-proposed 2026-10-08 with the ProxyAdmin transfers only;
+    the first nonce-43 proposal 0x38087d8c7f… that also granted the blacklist role and pinned the ULN302 libs was deleted, HTTP 204, unsigned)
+    https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x3c9ce026d05d94f64a98cd98bb830b0a4db83f895be3053e4230d0d631e3de27
     [0] ProxyAdmin(USN 0x5a82…6F11).transferOwnership(timelock)      [1] ProxyAdmin(sUSN 0x5130…decc).transferOwnership(timelock)
-    [2] USN.grantRole(BLACKLIST_MANAGER_ROLE, Safe)                   [3] sUSN.grantRole(BLACKLIST_MANAGER_ROLE, Safe)
-    [4-7] endpoint.setSendLibrary / setReceiveLibrary(USN | sUSN, 30101, ULN302 0x07fD…E12c / 0x0483…59e1, grace 0)  (pin the default libs)
-  All 8 calls simulate from the Safe. After execution every zkSync proxy upgrade is Safe -> scheduleUpgrade -> 48h -> executeUpgrade, like the other chains.
+  Both calls simulate from the Safe. (Blacklist role grant and ULN302 lib pinning deliberately left out; still open as 4b-8.) After execution every zkSync proxy upgrade is Safe -> scheduleUpgrade -> 48h -> executeUpgrade, like the other chains.
   executed: —
