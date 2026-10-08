@@ -35,28 +35,30 @@ Verified on-chain after execution (every chain): limiter.owner() still = Safe, l
             eta 1791377541 = 2026-10-07 12:52:21 UTC
 
 =====================================================================
-3. PHASE 2 — timelockV2.execute(limiter, 0, "acceptOwnership()", 0x, eta): PROPOSED 2026-10-06 ~17:00 UTC (0/3 each), signable from the eta (2026-10-07 ~12:52 UTC) until eta + 14 days (2026-10-21)
+3. PHASE 2 — timelockV2.execute(limiter, 0, "acceptOwnership()", 0x, eta): EXECUTED on all 6 chains 2026-10-08 07:31–07:37 UTC
+   Verified after execution (scripts, 2026-10-08): limiter.owner() == GenericTimelockV2, pendingOwner == 0, op consumed, all buckets still 4M/8h,
+   Safe can no longer call the limiter directly, timelock can (simulated blockOutbound from the timelock).
 =====================================================================
 After execution: limiter.owner() = timelockV2, pendingOwner = 0. From then on every setRateLimits / blockOutbound / unblockOutbound / resetInFlight
 is Safe -> timelockV2.queue(...) -> 4h -> Safe -> timelockV2.execute(...).
   Ethereum  Safe nonce 350  safeTxHash 0xd0a718b240479c2f2d93b6cbf655f5b5f9bcbef2f5d6ad733c3a0772800d1c1d
             https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0xd0a718b240479c2f2d93b6cbf655f5b5f9bcbef2f5d6ad733c3a0772800d1c1d
-            executed: —
+            executed: 2026-10-08 07:31:35 UTC  tx https://etherscan.io/tx/0xf6bb2b826044ec063084280e7286bcd0ab03a9d179ee5f8fef2e9489f0625eff
   Base      Safe nonce   8  safeTxHash 0x0ce335e1000d383781cb3ebc7f05c380fdea4a460803ec1acfc9d82b46d5c05c
             https://app.safe.global/transactions/tx?safe=base:0xf56d33ef52642ce226A566610A979DC8d954592D&id=multisig_0xf56d33ef52642ce226A566610A979DC8d954592D_0x0ce335e1000d383781cb3ebc7f05c380fdea4a460803ec1acfc9d82b46d5c05c
-            executed: —
+            executed: 2026-10-08 07:36:11 UTC  tx https://basescan.org/tx/0x864daffc983212ee06ed569b363f0cc43e502b4062f63d0464e71401eb487492
   HyperEVM  Safe nonce   7  safeTxHash 0xc59708c1693963804138bbbf392d4cebae4750647e215a8b6b48d1ae8cacb717
             https://app.safe.global/transactions/tx?safe=hyper-evm:0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8&id=multisig_0x3D6B578afDfdcd9e74EB0CdbDdCf2435502FC5b8_0xc59708c1693963804138bbbf392d4cebae4750647e215a8b6b48d1ae8cacb717
-            executed: —
+            executed: 2026-10-08 07:37:00 UTC  tx https://hyperevmscan.io/tx/0x929b5d5c59928040b80c8d5b6ddb5b20d79163d387397851ae4e1510c0d78946
   Citrea    Safe nonce   7  safeTxHash 0xada44c62fe475e79a9db2d797621336a59dc06718f0c1987ae027cb8f75df1d7
             https://safe.citrea.xyz/transactions/tx?safe=citrea-mainnet:0xB2aD758Ee2710527A28d906F9588938c2e5cFc80&id=multisig_0xB2aD758Ee2710527A28d906F9588938c2e5cFc80_0xada44c62fe475e79a9db2d797621336a59dc06718f0c1987ae027cb8f75df1d7
-            executed: —
+            executed: 2026-10-08 07:34:23 UTC  tx https://explorer.mainnet.citrea.xyz/tx/0xd22f89efc187ad6f1bb3dd0aa6153e9e8d83c0d230cc1fcd986eb94ed9477758
   Bera      Safe nonce   7  safeTxHash 0x02fa806724c664f56c82cb50b0260f5176d53c04d86694d2625fb316c2d61717
             https://app.safe.global/transactions/tx?safe=berachain:0x94E9f383b085D32973634EA7c9bB2038eF9a3C58&id=multisig_0x94E9f383b085D32973634EA7c9bB2038eF9a3C58_0x02fa806724c664f56c82cb50b0260f5176d53c04d86694d2625fb316c2d61717
-            executed: —
+            executed: 2026-10-08 07:33:50 UTC  tx https://berascan.com/tx/0xffe806001f93087330efa00b2e91037035a9a9b78626e68d093826c55e92322f
   zkSync    Safe nonce  42  safeTxHash 0x390864884817b46527f4328b6a65f1cbb03a3b8c83db0ac06a5553ba35b0e663
             https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x390864884817b46527f4328b6a65f1cbb03a3b8c83db0ac06a5553ba35b0e663
-            executed: —
+            executed: 2026-10-08 07:35:36 UTC  tx https://explorer.zksync.io/tx/0x09da2148f955775fa0f516989c2c0a6128bae09f4928134421c2efbdf61e7f84
 
 =====================================================================
 4. HISTORY
@@ -75,7 +77,7 @@ is Safe -> timelockV2.queue(...) -> 4h -> Safe -> timelockV2.execute(...).
 =====================================================================
   Timelock 0x6E7FD7751649993a8C01837Ab7f035d21E6f2Ace  owner zkSync Safe 0x15d9…a263, delay 48h (MIN 24h / MAX 48h), verified (zksolc 1.5.15)
   deploy tx https://explorer.zksync.io/tx/0x9f1ed3ecba5c46949694d3a148b890df73efe89607ba8c551c96200ecc72cc2e
-  Safe batch (nonce 43, 0/3): safeTxHash 0x3c9ce026d05d94f64a98cd98bb830b0a4db83f895be3053e4230d0d631e3de27  (re-proposed 2026-10-08 with the ProxyAdmin transfers only;
+  Safe batch (nonce 43, EXECUTED 2026-10-08 07:38:40 UTC, tx https://explorer.zksync.io/tx/0x82d0af77821989193a6f831e382b33ffaa6e7cb5cba230ba17ed9fe44f023c92): safeTxHash 0x3c9ce026d05d94f64a98cd98bb830b0a4db83f895be3053e4230d0d631e3de27  (re-proposed 2026-10-08 with the ProxyAdmin transfers only;
     the first nonce-43 proposal 0x38087d8c7f… that also granted the blacklist role and pinned the ULN302 libs was deleted, HTTP 204, unsigned)
     https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x3c9ce026d05d94f64a98cd98bb830b0a4db83f895be3053e4230d0d631e3de27
     [0] ProxyAdmin(USN 0x5a82…6F11).transferOwnership(timelock)      [1] ProxyAdmin(sUSN 0x5130…decc).transferOwnership(timelock)
@@ -89,9 +91,8 @@ is Safe -> timelockV2.queue(...) -> 4h -> Safe -> timelockV2.execute(...).
   setReceiveLibrary / skip / clear / nilify / burn require the timelock: Safe -> timelockV2.queue(endpoint, 0, "setConfig(address,address,(uint32,uint32,bytes)[])", args, eta) -> 4h -> execute.
   Peers, enforced options, pause, setRateLimiter stay owner-level on the Safe (immediate).
   Ethereum  Safe nonce 351  safeTxHash 0x7e605a4f7b045ee169a95342399285a73c39ccaa908ed6fdb4f35140bda4a3bb  (USN + sUSN -> 0x398dCDdae394198E6f81d6d8f827CF93b60fB5AE)
-            https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0x7e605a4f7b045ee169a95342399285a73c39ccaa908ed6fdb4f35140bda4a3bb
-            executed: —
+            executed 2026-10-08 07:33:11 UTC  tx https://etherscan.io/tx/0xe7e087d68d2961f3cfc6331fcb19d812fd16e6064cf800267bd9779b294e9393 — verified: endpoint.delegates(USN|sUSN) == timelockV2
   zkSync    Safe nonce  44  safeTxHash 0xaa848737d9f10381640f39b1be864623cd828bcb9bbbee314ad339c222582d85  (USN + sUSN -> 0x0948aA7e855f250173A124C4eAAf1a8F540B071D)
             https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0xaa848737d9f10381640f39b1be864623cd828bcb9bbbee314ad339c222582d85
-            executed: —
+            executed: — (1/3 signed as of 2026-10-08; zkSync delegates are still the Safe)
   Not applicable: Base / HyperEVM / Citrea / Bera (Hyperlane only, no LayerZero OApp). Sui: admin key / Fordefi, outside the EVM timelocks.

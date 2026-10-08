@@ -30,6 +30,10 @@ const LIMIT = ethers.parseEther(process.env.LIMIT ?? '4000000');
 const WINDOW = BigInt(process.env.WINDOW ?? '28800');
 const DEAD = ethers.zeroPadValue('0x000000000000000000000000000000000000dEaD', 32);
 const DEPLOYER = '0x173806021b18c4E60170e412DC88F991eB00D699';
+// Ownership model since 2026-10-07/08: each BridgeRateLimiter is owned by the chain's GenericTimelockV2 (4h), and the LayerZero
+// delegate of USN/sUSN on Ethereum and zkSync is that timelock too (scripts/out/generic-timelocks-4h.json).
+const TLV2: Record<string, string> = (() => { try { const j = JSON.parse(require('fs').readFileSync(resolve(__dirname, 'out/generic-timelocks-4h.json'), 'utf8')); return Object.fromEntries(Object.entries(j).map(([k, v]: any) => [k, v.timelock])); } catch { return {}; } })();
+const ZK_UPGRADE_TIMELOCK = '0x6E7FD7751649993a8C01837Ab7f035d21E6f2Ace';
 const CLOSED_HL = [239, 50104];
 const LZ_EIDS = [30101, 30165, 30378];
 const HL_DOMAINS = [1, 324, 8453, 999, 4114, 80094, 239, 50104, 358974494];
@@ -151,7 +155,8 @@ async function main() {
       continue;
     }
     const limiter = new ethers.Contract(chain.limiter, LIMITER_ABI, p);
-    check((await limiter.owner()).toLowerCase() === chain.safe.toLowerCase(), 'limiter owner == Safe');
+    const expectedLimOwner = TLV2[chain.name] ?? chain.safe;
+    check((await limiter.owner()).toLowerCase() === expectedLimOwner.toLowerCase(), `limiter owner == ${TLV2[chain.name] ? 'GenericTimelockV2' : 'Safe'}`, await limiter.owner());
 
     for (const t of chain.tokens) {
       const c = new ethers.Contract(t.proxy, TOKEN_ABI, p);
@@ -205,7 +210,8 @@ async function main() {
       // LayerZero specifics
       if (t.lz && chain.endpoint) {
         const ep = new ethers.Contract(chain.endpoint, EP_ABI, p);
-        check((await ep.delegates(t.proxy)).toLowerCase() === chain.safe.toLowerCase(), `${t.name} LZ delegate == Safe`);
+        const expDel = TLV2[chain.name] ?? chain.safe; const del = await ep.delegates(t.proxy);
+        check(del.toLowerCase() === expDel.toLowerCase(), `${t.name} LZ delegate == ${TLV2[chain.name] ? 'GenericTimelockV2' : 'Safe'}`, del);
         if (chain.name === 'zksync') {
           const eo: string = await c.enforcedOptions(30101, 1);
           const gas = eo.length >= 46 ? BigInt('0x' + eo.slice(14, 46)) : 0n;
@@ -237,6 +243,11 @@ async function main() {
         check(cu.toLowerCase() === cs.toLowerCase(), `USN ${side} ULN config == sUSN (eid ${eid})`);
       }
     }
+  }
+
+  if (!ONLY || ONLY.includes('zksync')) {
+    const pz = await provider(['https://mainnet.era.zksync.io'], 324);
+    if (pz) { console.log('\n== zksync proxy admins'); const O = ['function owner() view returns (address)']; for (const [n, pa] of [['USN', '0x5a82384A042cCe41f9aC6F0C110773E5B3266F11'], ['sUSN', '0x5130C9cd9e85B4a95F9b44c7Eb8667106e8fdecc']]) { const o = await new ethers.Contract(pa, O, pz).owner(); check(o === ZK_UPGRADE_TIMELOCK, `${n} ProxyAdmin owner == 48h Timelock`, o); } }
   }
 
   if (!ONLY || ONLY.includes('sophon')) {
