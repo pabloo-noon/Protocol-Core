@@ -77,6 +77,8 @@ zkSync the config txs cannot run before the upgrade tx.
    [ ] 4b-8 zkSync hygiene, separate batch when wanted: grantRole(BLACKLIST_MANAGER_ROLE, Safe) on USN + sUSN (held by nobody today),
             setSendLibrary/setReceiveLibrary -> ULN302 for both (currently default-lib). Ready: `PROPOSE=true npx hardhat run scripts/propose-zksync-upgrade-timelock.ts`
             re-run after nonce 43 executes proposes exactly these (the ProxyAdmin transfers are skipped once done).
+   [~] 4b-13 LayerZero delegate -> GenericTimelockV2 (4h) on USN + sUSN, Ethereum nonce 351 + zkSync nonce 44 proposed 2026-10-08 (timelock-log.txt section 6).
+            After execution, propose-dvn-config.ts / skip scripts must wrap setConfig / skip in timelock.queue + execute (TIMELOCK mode to add).
    [ ] 4b-9 Safe signer diversification: 0xe45B…42D0 + 0x09CE…3799 are on all 8 Safes; with 0x7b11…be37 or 0x8B36…aD01 three keys
             clear threshold everywhere. Add chain-unique signers on Ethereum and zkSync; consider a guard on Ethereum.
    [ ] 4b-10 Hot keys on Ethereum: MINTER_ROLE EOA 0x3769…76AE (MinterHandlerV2), treasury = sole APPROVER EOA 0xFeD8…f14E
