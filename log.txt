@@ -206,3 +206,10 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
   scripts/verify-rollout.ts updated to the new ownership model: 151 PASS; 6 FAIL = zkSync delegates (nonce 44 pending, 1/3) + Sophon peers (4a, held).
   Tx hashes in timelock-log.txt sections 3, 5, 6.
 2026-10-09  [Ethereum nonce 352] proposed: sNOON Vesting + Reward ProxyAdmins -> 48h Upgrade Timelock. safeTxHash 0xc3fc67e128a9f32f6f21d14039155b0ba7ace6e0417551957a6b9d440095d9c6
+
+2026-10-09  P0 FOUND: stale scheduled upgrade on the Ethereum 48h Upgrade Timelock — op 0x6e39336750b5862a6a87ec267de08804f12e47e91e1febbf7c4d2767c6727902,
+  scheduled 2026-06-10 17:24 UTC (tx 0x292dc55f25…): ProxyAdmin 0x1908…BD81, proxy sUSN vault 0xE24a…B91D -> impl 0xb9E5B8d826939580db142faBA61FcdEA9AAca6E7
+  (pre-audit implementation), data 0x. scheduledAt still set; delay elapsed; the Safe could execute it at any time with no further delay.
+  cancelUpgrade simulates from the Safe. Batch written: scripts/out/safe/ethereum-cancel-stale-susn-upgrade.json. Proposal via the Safe service
+  blocked by IP allowlist (403, egress 1.47.50.172) — import the JSON in the Transaction Builder or allowlist and re-run
+  `PROPOSE=true npx hardhat run scripts/propose-cancel-stale-upgrade.ts`.

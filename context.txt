@@ -57,6 +57,10 @@ zkSync the config txs cannot run before the upgrade tx.
    [x] 4b  Flare peers zeroed 2026-10-01 (txs in section 5)
    [ ] 4c  TAC: nothing to sign — its Hyperlane routes die when 3a/3b register 0x…dEaD on ETH/zkSync/Base/HyperEVM
 
+ STEP 4b-0 — P0: cancel the stale 2026-06-10 sUSN upgrade on the Ethereum Upgrade Timelock (op 0x6e393367…7902, proxy 0xE24a…B91D ->
+   pre-audit impl 0xb9E5…a6E7; executable by the Safe at any time). Safe tx = Timelock.cancelUpgrade(0x1908…BD81, 0xE24a…B91D, 0xb9E5…a6E7, 0x).
+   JSON ready: scripts/out/safe/ethereum-cancel-stale-susn-upgrade.json; script: scripts/propose-cancel-stale-upgrade.ts (PROPOSE=true once the IP is allowlisted).
+
  STEP 4b — found by the 2026-10-01 full audit (audit-2026-10-01.md), NOT covered by any queued tx:
    [ ] 4b-1 BEFORE the dEaD batches (ETH 347 / zkSync 38 / Base 6 / HyperEVM 5): front-end block + announcement for TAC and
             Sophon, and a make-whole plan for the supply left there (TAC 3,882 USN + 536 sUSN; Sophon 8,265 USN + 147 sUSN).
