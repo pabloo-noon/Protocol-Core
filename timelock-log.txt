@@ -96,3 +96,16 @@ is Safe -> timelockV2.queue(...) -> 4h -> Safe -> timelockV2.execute(...).
             https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0xaa848737d9f10381640f39b1be864623cd828bcb9bbbee314ad339c222582d85
             executed: — (1/3 signed as of 2026-10-08; zkSync delegates are still the Safe)
   Not applicable: Base / HyperEVM / Citrea / Bera (Hyperlane only, no LayerZero OApp). Sui: admin key / Fordefi, outside the EVM timelocks.
+
+=====================================================================
+7. ETHEREUM: sNOON Vesting + Reward ProxyAdmins -> 48h Upgrade Timelock 0xE5e412C212B4FBbF550A94e7BD5e83dB0B315A7F — proposed 2026-10-09
+=====================================================================
+  Vesting 0x56993afd8CdF9409ACf3b3AA96F0C10595a070D2 (proxy; ProxyAdmin 0x9091847a864d35CeB6907827437E664138b40acc, owner Safe today)
+  Reward  0x22C9e2eD2f016Ae4A0131C251BF3FCe882a92eD5 (proxy; ProxyAdmin 0x9088e8cC6c4Af8f3032aebde937C1b33E3f0e1Fe, owner Safe today)
+  NOON and sNOON ProxyAdmins are already owned by this timelock; after execution every Ethereum proxy upgrade is 48h-timelocked.
+  Safe nonce 352 (0/3): safeTxHash 0xc3fc67e128a9f32f6f21d14039155b0ba7ace6e0417551957a6b9d440095d9c6
+    https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0xc3fc67e128a9f32f6f21d14039155b0ba7ace6e0417551957a6b9d440095d9c6
+    [0] ProxyAdmin(Vesting).transferOwnership(timelock)   [1] ProxyAdmin(Reward).transferOwnership(timelock)   (both simulate from the Safe)
+  executed: —
+  DD note (not in this batch): contract-level owners are not the Safe — Vesting owner = Community Fund 0x364a77729fc3eDdf7fC430C9F4913e055b0F68b9,
+  Reward owner = 0x5e55C16ff0d6AE18ea9B2f0783E2D94b44878558.
