@@ -69,3 +69,63 @@ ANNOTATE deprecated chains
   - Sophon and TAC: add "routes closed on 1 October 2026: the remote tokens on Ethereum, zkSync, Base and HyperEVM point to a dead
     address, limits are 1 wei, and Starknet unenrolled both on 2 October. Tokens on Sophon/TAC can no longer bridge."
   - Flare: correctly absent, keep it that way (both Flare OFTs have no peers and 0 supply).
+
+=====================================================================
+ADD — "Governance and timelocks" (how changes happen; partners asked for this repeatedly)
+=====================================================================
+  Every chain Safe (3-of-N) is the owner of two timelocks and signs everything; nothing is controlled by an EOA on the EVM chains
+  (deployer renounced; see roles). Any queued operation can be cancelled by the Safe immediately.
+  - Upgrade Timelock (48h; HyperEVM 24h): owner of every ProxyAdmin -> every proxy upgrade = schedule -> 48h -> execute.
+    Ethereum covers USN, sUSN, NOON, sNOON and (from Safe nonce 352) sNOON Vesting + Reward; zkSync from Safe nonce 43.
+  - Generic Timelock V2 (4h, bounds 4h–48h): owner of the BridgeRateLimiter on each chain (rate limits, route block/unblock),
+    LayerZero delegate of USN/sUSN on Ethereum and zkSync (DVNs, libraries, nonce skips), and (from Safe nonce 354) admin of the
+    Ethereum MinterHandlerV2 + RedeemHandlerV2 (rebase limit, mint limits, oracle feeds/staleness/threshold, custodial wallet,
+    treasury, redemption limits, pause).
+  - Immediate (Safe, no delay): token pause/unpause and blacklist on USN/sUSN receivers, LayerZero peers and enforced options,
+    setRateLimiter wiring, Safe-side cancel of any queued op.
+  Flow to document: Safe signs queue -> delay -> Safe signs execute; events OperationQueued / OperationExecuted / OperationCancelled
+  on the Generic Timelock, UpgradeScheduled / UpgradeExecuted / UpgradeCancelled on the Upgrade Timelock.
+
+=====================================================================
+ADD — "Protocol parameters" (live values, read on chain 2026-10-09; keep a dated table on the page)
+=====================================================================
+  Bridge rate limit            4,000,000 tokens per route per 8h sliding window, inbound and outbound, every chain and route
+  Oracle staleness (minter)    48h today -> 25h once Safe nonce 354 + its phase 2 execute (setOracleStalenessThreshold 90000)
+  Price deviation threshold    50 bps (priceThresholdBps)
+  Rebase limit                 25,000 USN per rebase (rebaseLimit)
+  Mint limit per block         10,000,000 USN       Direct mint limit per day   10,000,000 USN
+  Custodial wallet (minter)    0x4fD04553468610e5a88a2cffA38E057C954312Da (= "Collateral 2" on the page)
+  sUSN vault (minter target)   0xE24a3DC889621612422A64E6388927901608B91D
+  LayerZero enforced gas       120k lzReceive toward Ethereum on zkSync and Sui (Ethereum side: front-end passes options)
+
+=====================================================================
+ADD — "Protocol smart contracts" corrections (Ethereum)
+=====================================================================
+  Minter        0xB91b361ebE4022Bb62dF0651bDD09b21209ac058  (correct on the page)
+  Redeemer      the page shows 0xF5DEAfcdFbC21Cb1E558906d00A1Fdb4b56173e8; live RedeemHandlerV2 deployments are
+                0xCee62389CB2A63901524D6924E84d0afCF44a411 and 0xAb0c423975B446e785E21B9b10F3B421c8ED9197 (the latter active in Oct 2026) — list the current one
+  Generic Timelock V2 (4h)  0x398dCDdae394198E6f81d6d8f827CF93b60fB5AE  (new; owner of the limiter, LZ delegate, handler admin)
+  Generic Timelock (2d)     0x36857EF0B10A61A68d58C29eE256990fa9699722  (keep listed; not used for the bridge/handler roles)
+
+=====================================================================
+ADD — "Other chains: admin keys" (transparency items partners will find anyway)
+=====================================================================
+  Sui      sUSN OFT admin (AdminCap/MigrationCap/UpgradeCap) = single key via Fordefi 0x07b7e622…91b6 once transferred (today 0x67cd…906d); state the plan.
+  Starknet USN/sUSN warp routers owner = 0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072 (single-key account; multisig/Fordefi move planned).
+
+=====================================================================
+ADD — "Retired contracts" (so nobody integrates against them)
+=====================================================================
+  Old implementations (replaced 2026-10-01): ETH USN 0x961e78b26F6984A2DDAC42e4CE5B8014A311608e, ETH sUSN 0xEbBcbC6672683e1956125e7c5e89E14CeAC8cd3D,
+  zkSync USN 0xa5b228237bEf9bC804D8d6E7c76d0853a406bf34, zkSync sUSN 0x9F80bbe82dBad5D74904c83bD8990c8Ba9dfe82a, Base/HyperEVM sUSN 0xdA67B4284609d2d48e5d10cfAc411572727dc1eD (impl, same address as the Citrea/Bera proxy — do not confuse), Citrea/Bera sUSN 0x0aDa1cb43aC67FFfA2773B169920bfAB4c6391B7.
+  Flare OFTs 0xF98AF70f2A5a9526248076Df6706Ac96BD1F8A41 / 0x6086d52F28c7b7481d8aE0FAdD4349cbB608C2Bd: empty, peers zeroed.
+  2-day GenericTimelocks on Base/HyperEVM/Citrea/Bera/zkSync (5–6 Oct): superseded by V2, unused.
+
+=====================================================================
+ADD — "Change log" on the page (dated, one line each)
+=====================================================================
+  2026-10-01  audited bridge upgrade executed on 6 chains; 4M/8h limits live; TAC + Sophon routes closed; USN ETH<->zkSync to 3 DVNs
+  2026-10-02  Starknet unenrolls TAC + Sophon
+  2026-10-06  Generic Timelock V2 (4h) deployed on 6 chains
+  2026-10-08  limiters + LayerZero delegate (Ethereum) under the 4h timelock; zkSync ProxyAdmins under a 48h Upgrade Timelock
+  (pending)   Vesting + Reward ProxyAdmins under the 48h timelock; minter/redeem admin under the 4h timelock; oracle staleness 25h

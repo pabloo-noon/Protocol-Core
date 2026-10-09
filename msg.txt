@@ -168,3 +168,11 @@ STEP 10 — P0: cancel the stale 2026-06-10 sUSN upgrade on the Ethereum Upgrade
 [Ethereum] 10. Timelock.cancelUpgrade(ProxyAdmin 0x1908…BD81, sUSN vault 0xE24a…B91D, pre-audit impl 0xb9E5…a6E7, 0x) (nonce 353)
 https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0xe8f576f74b2a1e3f5ef5459239f5469d8e4f1f7440aa0799ef14fcdbe0c4f849
 Sign and execute 352 then 353 (nonce order). Until 353 executes, the stale upgrade remains executable by the Safe at any time.
+
+=====================================================================
+STEP 11 — Ethereum: Minter + Redeem handler admin -> 4h timelock, queue oracle staleness 48h -> 25h (proposed 2026-10-09)
+=====================================================================
+[Ethereum] 11-1. grant admin to timelock4h (3 contracts) + queue setOracleStalenessThreshold(90000) + Safe renounces admin (nonce 354) — execute BEFORE 2026-10-10 08:27 UTC
+https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0x8451baeb21acfc840146e954bc347513d822244ceb1b047295db8cc49de42673
+[Ethereum] 11-2. timelock4h.execute(staleness 25h) — proposed after 11-1 lands, signable from 2026-10-10 12:27 UTC.
+Ethereum queue order: 352 (Vesting/Reward ProxyAdmins) -> 353 (cancel stale sUSN upgrade, P0) -> 354 (this).

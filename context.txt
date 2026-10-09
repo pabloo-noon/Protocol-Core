@@ -84,6 +84,8 @@ zkSync the config txs cannot run before the upgrade tx.
    [~] 4b-13 LayerZero delegate -> GenericTimelockV2 (4h): Ethereum DONE 2026-10-08 07:33 (nonce 351); zkSync nonce 44 still pending (1/3) (timelock-log.txt section 6).
             After execution, propose-dvn-config.ts / skip scripts must wrap setConfig / skip in timelock.queue + execute (TIMELOCK mode to add).
    [~] 4b-14 Ethereum Vesting + Reward ProxyAdmins -> 48h Upgrade Timelock: nonce 352 proposed 2026-10-09 (timelock-log.txt section 7).
+   [~] 4b-15 Ethereum Minter + Redeem handlers DEFAULT_ADMIN -> timelock4h + oracle staleness 48h -> 25h queued: nonce 354 proposed 2026-10-09
+            (execute before 2026-10-10 08:27 UTC; then PHASE=2). timelock-log.txt section 8.
    [ ] 4b-9 Safe signer diversification: 0xe45B…42D0 + 0x09CE…3799 are on all 8 Safes; with 0x7b11…be37 or 0x8B36…aD01 three keys
             clear threshold everywhere. Add chain-unique signers on Ethereum and zkSync; consider a guard on Ethereum.
    [ ] 4b-10 Hot keys on Ethereum: MINTER_ROLE EOA 0x3769…76AE (MinterHandlerV2), treasury = sole APPROVER EOA 0xFeD8…f14E
