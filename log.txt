@@ -213,3 +213,4 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
   cancelUpgrade simulates from the Safe. Batch written: scripts/out/safe/ethereum-cancel-stale-susn-upgrade.json. Proposal via the Safe service
   blocked by IP allowlist (403, egress 1.47.50.172) — import the JSON in the Transaction Builder or allowlist and re-run
   `PROPOSE=true npx hardhat run scripts/propose-cancel-stale-upgrade.ts`.
+2026-10-09  [Ethereum nonce 353] PROPOSED cancelUpgrade for the stale 2026-06-10 sUSN upgrade (op 0x6e393367…7902). safeTxHash 0xe8f576f74b2a1e3f5ef5459239f5469d8e4f1f7440aa0799ef14fcdbe0c4f849. Queued behind nonce 352 (Vesting/Reward ProxyAdmins).

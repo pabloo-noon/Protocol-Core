@@ -59,7 +59,7 @@ zkSync the config txs cannot run before the upgrade tx.
 
  STEP 4b-0 — P0: cancel the stale 2026-06-10 sUSN upgrade on the Ethereum Upgrade Timelock (op 0x6e393367…7902, proxy 0xE24a…B91D ->
    pre-audit impl 0xb9E5…a6E7; executable by the Safe at any time). Safe tx = Timelock.cancelUpgrade(0x1908…BD81, 0xE24a…B91D, 0xb9E5…a6E7, 0x).
-   JSON ready: scripts/out/safe/ethereum-cancel-stale-susn-upgrade.json; script: scripts/propose-cancel-stale-upgrade.ts (PROPOSE=true once the IP is allowlisted).
+   PROPOSED 2026-10-09 as Ethereum nonce 353, safeTxHash 0xe8f576f74b2a1e3f5ef5459239f5469d8e4f1f7440aa0799ef14fcdbe0c4f849 (0/3). Execute 352 then 353.
 
  STEP 4b — found by the 2026-10-01 full audit (audit-2026-10-01.md), NOT covered by any queued tx:
    [ ] 4b-1 BEFORE the dEaD batches (ETH 347 / zkSync 38 / Base 6 / HyperEVM 5): front-end block + announcement for TAC and
