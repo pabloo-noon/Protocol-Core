@@ -215,3 +215,21 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
   `PROPOSE=true npx hardhat run scripts/propose-cancel-stale-upgrade.ts`.
 2026-10-09  [Ethereum nonce 353] PROPOSED cancelUpgrade for the stale 2026-06-10 sUSN upgrade (op 0x6e393367…7902). safeTxHash 0xe8f576f74b2a1e3f5ef5459239f5469d8e4f1f7440aa0799ef14fcdbe0c4f849. Queued behind nonce 352 (Vesting/Reward ProxyAdmins).
 2026-10-09  [Ethereum nonce 354] proposed: Minter + 2x Redeem handler DEFAULT_ADMIN -> GenericTimelockV2 (grant + Safe renounce) and timelock.queue(setOracleStalenessThreshold 90000, eta 2026-10-10 12:27 UTC). safeTxHash 0x8451baeb21acfc840146e954bc347513d822244ceb1b047295db8cc49de42673
+
+2026-10-12 08:15:47 UTC  [Ethereum nonce 352] EXECUTED — sNOON Vesting + Reward ProxyAdmins -> 48h Upgrade Timelock 0xE5e412C2…5A7F
+  tx https://etherscan.io/tx/0x82ac0a0007494fe25c4c3606601dd27191e7ca6d8ed01aa78a50e603d66f9970
+  Verified: ProxyAdmin 0x9091…0acc (Vesting) and 0x9088…e1Fe (Reward) owner == Upgrade Timelock. Every Ethereum proxy (USN, sUSN, NOON, sNOON, Vesting, Reward) now upgrades only through the 48h timelock.
+
+2026-10-12 08:16:47 UTC  [Ethereum nonce 353] EXECUTED — P0 cancelUpgrade of the stale 2026-06-10 sUSN upgrade (op 0x6e393367…7902 -> pre-audit impl 0xb9E5…a6E7)
+  tx https://etherscan.io/tx/0x9c16bcd0d9aa0d68457e5bc15fd157e1e475f2981940e6c07639f4ef5713f07e
+  Verified: Upgrade Timelock scheduledAt(op) == 0. No pending operation remains on the Ethereum Upgrade Timelock.
+
+2026-10-12  [Community Fund Safe 0x364a77729fc3eDdf7fC430C9F4913e055b0F68b9, nonce 39] PROPOSED sNOON.setMerkleRoot(0xac3dd3da73500724d522b68b0358e0f3c6575e6030c0fa6780f607150ef2859d, 1 wei)
+  on sNOON 0x5f9ee665830BE17b2073a9800Eb7bbbe51b471D7 (owner = Community Fund Safe, 3/5; previous root 0xf51258ff…c33a, totalClaimable 3,031,680). safeTxHash 0x0473d320f7838d62f40fa4df56b29b27b48c786498537614fc6cceee245cf649
+  https://app.safe.global/transactions/tx?safe=eth:0x364a77729fc3eDdf7fC430C9F4913e055b0F68b9&id=multisig_0x364a77729fc3eDdf7fC430C9F4913e055b0F68b9_0x0473d320f7838d62f40fa4df56b29b27b48c786498537614fc6cceee245cf649
+
+2026-10-12  [Ethereum nonce 354] re-proposed: the 2026-10-09 proposal 0x8451baeb21… missed its eta window (2/3 signed, never executed) and was deleted (HTTP 204);
+  re-proposed as 0x4d0d03139414045f0fced4f45d32a950897611c847c46ac79da8c55efb2b51f7 with eta 1791893927 = 2026-10-13 12:18:47 UTC (phase 1 must execute before 2026-10-13 08:18 UTC).
+  Same 7 calls: grant DEFAULT_ADMIN to GenericTimelockV2 on MinterHandlerV2 + both RedeemHandlerV2, queue setOracleStalenessThreshold(90000), Safe renounces admin on the three.
+  Re-audited 2026-10-12: safeTxHash matches on-chain getTransactionHash, MultiSendCallOnly 1.4.1, all 7 calls simulate from the Safe, order grants < queue < renounces, op not yet queued.
+  https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0x4d0d03139414045f0fced4f45d32a950897611c847c46ac79da8c55efb2b51f7

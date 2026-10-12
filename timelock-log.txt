@@ -82,7 +82,7 @@ is Safe -> timelockV2.queue(...) -> 4h -> Safe -> timelockV2.execute(...).
     https://app.safe.global/transactions/tx?safe=zksync:0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263&id=multisig_0x15d91EB2c3188BB85881D2E09b5025F3Fcc4a263_0x3c9ce026d05d94f64a98cd98bb830b0a4db83f895be3053e4230d0d631e3de27
     [0] ProxyAdmin(USN 0x5a82…6F11).transferOwnership(timelock)      [1] ProxyAdmin(sUSN 0x5130…decc).transferOwnership(timelock)
   Both calls simulate from the Safe. (Blacklist role grant and ULN302 lib pinning deliberately left out; still open as 4b-8.) After execution every zkSync proxy upgrade is Safe -> scheduleUpgrade -> 48h -> executeUpgrade, like the other chains.
-  executed: —
+  executed 2026-10-08 07:38:40 UTC (tx 0x82d0af77…3c92) — verified: both zkSync ProxyAdmins owner == Timelock 0x6E7FD775…2Ace
 
 =====================================================================
 6. LAYERZERO DELEGATE -> GenericTimelockV2 (4h): DVN / library / nonce-skip changes under the timelock — proposed 2026-10-08
@@ -105,20 +105,20 @@ is Safe -> timelockV2.queue(...) -> 4h -> Safe -> timelockV2.execute(...).
   NOON and sNOON ProxyAdmins are already owned by this timelock; after execution every Ethereum proxy upgrade is 48h-timelocked.
   Safe nonce 352 (0/3): safeTxHash 0xc3fc67e128a9f32f6f21d14039155b0ba7ace6e0417551957a6b9d440095d9c6
     https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0xc3fc67e128a9f32f6f21d14039155b0ba7ace6e0417551957a6b9d440095d9c6
-    [0] ProxyAdmin(Vesting).transferOwnership(timelock)   [1] ProxyAdmin(Reward).transferOwnership(timelock)   (both simulate from the Safe)
-  executed: —
+    [0] ProxyAdmin(Vesting).transferOwnership(timelock)   [1] ProxyAdmin(Reward).transferOwnership(timelock)
+  executed 2026-10-12 08:15:47 UTC  tx https://etherscan.io/tx/0x82ac0a0007494fe25c4c3606601dd27191e7ca6d8ed01aa78a50e603d66f9970 — verified: both ProxyAdmins owner == Upgrade Timelock
   DD note (not in this batch): contract-level owners are not the Safe — Vesting owner = Community Fund 0x364a77729fc3eDdf7fC430C9F4913e055b0F68b9,
   Reward owner = 0x5e55C16ff0d6AE18ea9B2f0783E2D94b44878558.
 
 =====================================================================
 8. ETHEREUM: MinterHandlerV2 + RedeemHandlerV2 (x2) DEFAULT_ADMIN -> GenericTimelockV2 (4h); first queued change = oracle staleness 48h -> 25h — proposed 2026-10-09
 =====================================================================
-  Safe nonce 354 (0/3): safeTxHash 0x8451baeb21acfc840146e954bc347513d822244ceb1b047295db8cc49de42673
-    https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0x8451baeb21acfc840146e954bc347513d822244ceb1b047295db8cc49de42673
+  Safe nonce 354: safeTxHash 0x4d0d03139414045f0fced4f45d32a950897611c847c46ac79da8c55efb2b51f7  (re-proposed 2026-10-12, eta 1791893927 = 2026-10-13 12:18:47 UTC; the 2026-10-09 proposal 0x8451baeb21… missed its eta window and was deleted)
+    https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0x4d0d03139414045f0fced4f45d32a950897611c847c46ac79da8c55efb2b51f7
     [0-2] grantRole(DEFAULT_ADMIN_ROLE, timelock4h) on Minter 0xB91b361ebE4022Bb62dF0651bDD09b21209ac058, Redeem 0xCee62389CB2A63901524D6924E84d0afCF44a411, Redeem 0xAb0c423975B446e785E21B9b10F3B421c8ED9197
-    [3]   timelock4h.queue(minter, 0, "setOracleStalenessThreshold(uint256)", 90000, eta 1791635243 = 2026-10-10 12:27:23 UTC)
+    [3]   timelock4h.queue(minter, 0, "setOracleStalenessThreshold(uint256)", 90000, eta 1791893927 = 2026-10-13 12:18:47 UTC)
     [4-6] renounceRole(DEFAULT_ADMIN_ROLE, Safe) on the three -> timelock4h is the sole admin
-  Phase 1 must execute before 2026-10-10 08:27 UTC (eta - 4h). PHASE=2 (timelock4h.execute of the staleness change) to propose after phase 1 lands; signable from the eta for 14 days.
+  Phase 1 must execute before 2026-10-13 08:18 UTC (eta - 4h). PHASE=2 (timelock4h.execute of the staleness change) to propose after phase 1 lands; signable from the eta for 14 days.
   Covers from then on (4h delay): rebase limit, mint limits, price feeds / price threshold, custodial wallet, collateral + user whitelists (minter);
   treasury, redemption limits, approver/burner roles, pause (redeem handlers). NOTE: pause() on the redeem handlers is DEFAULT_ADMIN-gated -> 4h delayed after this.
   executed: —
