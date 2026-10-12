@@ -233,3 +233,9 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
   Same 7 calls: grant DEFAULT_ADMIN to GenericTimelockV2 on MinterHandlerV2 + both RedeemHandlerV2, queue setOracleStalenessThreshold(90000), Safe renounces admin on the three.
   Re-audited 2026-10-12: safeTxHash matches on-chain getTransactionHash, MultiSendCallOnly 1.4.1, all 7 calls simulate from the Safe, order grants < queue < renounces, op not yet queued.
   https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0x4d0d03139414045f0fced4f45d32a950897611c847c46ac79da8c55efb2b51f7
+
+2026-10-12 09:23:59 UTC  [Ethereum nonce 354] EXECUTED — Minter + 2x Redeem handler DEFAULT_ADMIN -> GenericTimelockV2 4h; oracle staleness 48h -> 25h queued
+  tx https://etherscan.io/tx/0xaffdf7cbc01d84fc5a4c479c62f5931e22dae2a00f06b35d70ffebb9d220b6e1  (block 26175472)
+  Verified: MinterHandlerV2 0xB91b…c058, RedeemHandlerV2 0xCee6…a411 and 0xAb0c…9197 — timelock4h hasRole(DEFAULT_ADMIN) = true, Safe = false (renounced).
+  timelock4h op 0xb2de3392a124acf145b01f3812de0a00a909c951b1f32679abb3f559da035e50 (setOracleStalenessThreshold 90000, eta 1791893927) queued = true. oracleStalenessThreshold still 172800 until phase 2.
+  Phase 2 (timelock4h.execute, signable from 2026-10-13 12:18:47 UTC, window 14 days): batch written to scripts/out/safe/ethereum-handlers-admin-timelock-execute.json; Safe-service proposal pending (HTTP 403 IP allowlist, egress 49.230.131.200).

@@ -174,7 +174,8 @@ Sign and execute 352 then 353 (nonce order). Until 353 executes, the stale upgra
 =====================================================================
 STEP 11 — Ethereum: Minter + Redeem handler admin -> 4h timelock, queue oracle staleness 48h -> 25h (proposed 2026-10-09)
 =====================================================================
-[Ethereum] 11-1. grant admin to timelock4h (3 contracts) + queue setOracleStalenessThreshold(90000) + Safe renounces admin (nonce 354) — execute BEFORE 2026-10-13 08:18 UTC
+[Ethereum] 11-1. DONE 2026-10-12 09:23 UTC — https://etherscan.io/tx/0xaffdf7cbc01d84fc5a4c479c62f5931e22dae2a00f06b35d70ffebb9d220b6e1
+grant admin to timelock4h (3 contracts) + queue setOracleStalenessThreshold(90000) + Safe renounces admin (nonce 354)
 https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0x4d0d03139414045f0fced4f45d32a950897611c847c46ac79da8c55efb2b51f7
 [Ethereum] 11-2. timelock4h.execute(staleness 25h) — proposed after 11-1 lands, signable from 2026-10-13 12:18 UTC.
 Ethereum queue order: 352 (Vesting/Reward ProxyAdmins) -> 353 (cancel stale sUSN upgrade, P0) -> 354 (this).
