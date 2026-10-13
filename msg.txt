@@ -186,3 +186,9 @@ STEP 12 — Community Fund Safe: sNOON.setMerkleRoot (proposed 2026-10-12)
 =====================================================================
 [Community Fund 0x364a…68b9] 12. sNOON.setMerkleRoot(0xac3dd3da…859d, 1 wei) (nonce 39)
 https://app.safe.global/transactions/tx?safe=eth:0x364a77729fc3eDdf7fC430C9F4913e055b0F68b9&id=multisig_0x364a77729fc3eDdf7fC430C9F4913e055b0F68b9_0x0473d320f7838d62f40fa4df56b29b27b48c786498537614fc6cceee245cf649
+
+=====================================================================
+STEP 13 — Ethereum: sUSN REBASE_MANAGER revoked from the two EOAs (H-7, proposed 2026-10-13)
+=====================================================================
+[Ethereum] 13. sUSN.revokeRole(REBASE_MANAGER_ROLE, deployer 0x1738…D699) + revokeRole(REBASE_MANAGER_ROLE, 0xcC24…b11f) (nonce 356) — immediate, no timelock
+https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0x005c8b0c44a02014386aaeb49f10fe1d2393ce65a396b9dfc0e34729f87a5cc3

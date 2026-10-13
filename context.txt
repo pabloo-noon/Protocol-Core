@@ -74,7 +74,8 @@ zkSync the config txs cannot run before the upgrade tx.
    [~] 4b-4 Starknet routers (USN 0x01e6…135b, sUSN 0x0241…4d17, owner = single-key Braavos 0x25beda…3072):
             unenroll_remote_router(239) + (50104) DONE 2026-10-02 on both (txs in log.txt; domains() = [1, 324]).
             STILL OPEN: transfer_ownership to a Starknet multisig.
-   [ ] 4b-5 ETH Safe: revokeRole(REBASE_MANAGER_ROLE, deployer 0x1738…D699) + revokeRole(REBASE_MANAGER_ROLE, 0xcC24…b11f) on sUSN.
+   [~] 4b-5 ETH Safe: revokeRole(REBASE_MANAGER_ROLE, deployer 0x1738…D699) + revokeRole(REBASE_MANAGER_ROLE, 0xcC24…b11f) on sUSN.
+            PROPOSED 2026-10-13 as nonce 356 (one batch, 0x005c8b0c…5cc3, 0/3). Safe + MinterHandlerV2 keep the role.
    [ ] 4b-6 ETH Safe: setEnforcedOptions USN + sUSN (30165, SEND, 120k) and sUSN (30378, SEND, 500k) so delivery no longer
             depends on the front-end's extraOptions.
    [ ] 4b-7 HyperEVM Safe: registerHyperlaneRemoteToken(358974494, 0x…dEaD) on sUSN (Starknet does not enroll HyperEVM) — or enroll it on Starknet.
