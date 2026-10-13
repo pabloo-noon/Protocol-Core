@@ -239,3 +239,7 @@ NEXT (see msg.txt): 2a Ethereum 346 · 2b Base 5 · 2c Bera 4 · 2d HyperEVM 4 �
   Verified: MinterHandlerV2 0xB91b…c058, RedeemHandlerV2 0xCee6…a411 and 0xAb0c…9197 — timelock4h hasRole(DEFAULT_ADMIN) = true, Safe = false (renounced).
   timelock4h op 0xb2de3392a124acf145b01f3812de0a00a909c951b1f32679abb3f559da035e50 (setOracleStalenessThreshold 90000, eta 1791893927) queued = true. oracleStalenessThreshold still 172800 until phase 2.
   Phase 2 (timelock4h.execute, signable from 2026-10-13 12:18:47 UTC, window 14 days): batch written to scripts/out/safe/ethereum-handlers-admin-timelock-execute.json; Safe-service proposal pending (HTTP 403 IP allowlist, egress 49.230.131.200).
+
+2026-10-13  [Ethereum nonce 355] PROPOSED phase 2: timelock4h.execute(MinterHandlerV2, 0, "setOracleStalenessThreshold(uint256)", 90000, eta 1791893927)
+  safeTxHash 0xa0a9ae7d472867c2f550d13510237e65a60403fb4f500080d38310b94c85c90c (0/3). Signable from 2026-10-13 12:18:47 UTC (eta), window 14 days (until 2026-10-27 12:18 UTC). Sets oracle staleness 48h -> 25h.
+  https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0xa0a9ae7d472867c2f550d13510237e65a60403fb4f500080d38310b94c85c90c

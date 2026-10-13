@@ -119,7 +119,8 @@ is Safe -> timelockV2.queue(...) -> 4h -> Safe -> timelockV2.execute(...).
     [3]   timelock4h.queue(minter, 0, "setOracleStalenessThreshold(uint256)", 90000, eta 1791893927 = 2026-10-13 12:18:47 UTC)
     [4-6] renounceRole(DEFAULT_ADMIN_ROLE, Safe) on the three -> timelock4h is the sole admin
   Phase 1 EXECUTED 2026-10-12 09:23:59 UTC  tx https://etherscan.io/tx/0xaffdf7cbc01d84fc5a4c479c62f5931e22dae2a00f06b35d70ffebb9d220b6e1 — verified: timelock4h sole DEFAULT_ADMIN on the 3 handlers, op 0xb2de3392…5e50 queued.
-  Phase 2 (timelock4h.execute of the staleness change): signable from 2026-10-13 12:18:47 UTC for 14 days; proposal pending (Safe-service IP allowlist).
+  Phase 2 PROPOSED 2026-10-13 as Safe nonce 355: safeTxHash 0xa0a9ae7d472867c2f550d13510237e65a60403fb4f500080d38310b94c85c90c  (timelock4h.execute of the staleness change; signable from 2026-10-13 12:18:47 UTC for 14 days)
+    https://app.safe.global/transactions/tx?safe=eth:0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f&id=multisig_0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f_0xa0a9ae7d472867c2f550d13510237e65a60403fb4f500080d38310b94c85c90c
   Covers from then on (4h delay): rebase limit, mint limits, price feeds / price threshold, custodial wallet, collateral + user whitelists (minter);
   treasury, redemption limits, approver/burner roles, pause (redeem handlers). NOTE: pause() on the redeem handlers is DEFAULT_ADMIN-gated -> 4h delayed after this.
   executed: —
