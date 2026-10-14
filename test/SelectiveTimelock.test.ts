@@ -507,4 +507,125 @@ describe('SelectiveTimelock', function () {
       ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
     });
   });
+
+  describe('ownership transfers while USN is not under the timelock', function () {
+    // Drops the transferOwnership / renounceOwnership delays to 0 (waits the
+    // current 48h, as the two-step flow requires).
+    async function unprotectOwnership() {
+      for (const fn of ['transferOwnership', 'renounceOwnership'])
+        await tl.scheduleDelayChange(usnAddr, sel(fn), 0);
+      await time.increase(OWNER_DELAY);
+      for (const fn of ['transferOwnership', 'renounceOwnership'])
+        await tl.executeDelayChange(usnAddr, sel(fn));
+      expect(await tl.delay(usnAddr, sel('transferOwnership'))).to.equal(0);
+      expect(await tl.delay(usnAddr, sel('renounceOwnership'))).to.equal(0);
+    }
+
+    it('BYPASS: with transferOwnership at delay 0 the Safe re-takes USN and calls setAdmin seconds later', async function () {
+      await unprotectOwnership();
+      expect(await tl.delay(usnAddr, sel('setAdmin'))).to.equal(ADMIN_DELAY); // setAdmin is still "protected"
+      const t0 = await now();
+      await tl.call(usnAddr, 0, NONE, enc('transferOwnership', [safe.address]));
+      await usn.connect(safe).acceptOwnership();
+      await usn.connect(safe).setAdmin(newAdmin.address);
+      const t1 = await now();
+      expect(t1 - t0).to.be.lessThan(10n); // three consecutive blocks, no delay observed
+      expect(await usn.owner()).to.equal(safe.address);
+      expect(await usn.admin()).to.equal(newAdmin.address);
+    });
+
+    it('BYPASS: with renounceOwnership at delay 0 the Safe can orphan USN at once (no owner, no setAdmin, no unpause)', async function () {
+      await unprotectOwnership();
+      await tl.call(usnAddr, 0, NONE, enc('renounceOwnership'));
+      expect(await usn.owner()).to.equal(ethers.ZeroAddress);
+      await expect(
+        usn.connect(safe).setAdmin(newAdmin.address)
+      ).to.be.revertedWithCustomError(usn, 'OwnableUnauthorizedAccount');
+      await expect(
+        tl.call(usnAddr, 0, NONE, enc('unpause'))
+      ).to.be.revertedWithCustomError(tl, 'CallReverted');
+    });
+
+    it('with transferOwnership delayed, the same re-take waits 48h and shows up in the queue first', async function () {
+      const data = enc('transferOwnership', [safe.address]);
+      await expect(
+        tl.call(usnAddr, 0, NONE, data)
+      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
+      const eta = (await now()) + OWNER_DELAY + 60n;
+      await tl.queue(usnAddr, 0, NONE, data, eta);
+      expect(await usn.owner()).to.equal(tlAddr);
+      expect(await usn.admin()).to.equal(safe.address);
+      await time.increaseTo(eta);
+      await tl.execute(usnAddr, 0, NONE, data, eta);
+      await usn.connect(safe).acceptOwnership();
+      expect(await usn.owner()).to.equal(safe.address);
+    });
+
+    it('a pending transfer out of the timelock can be withdrawn before the new owner accepts', async function () {
+      await unprotectOwnership();
+      await tl.call(
+        usnAddr,
+        0,
+        NONE,
+        enc('transferOwnership', [stranger.address])
+      );
+      expect(await usn.pendingOwner()).to.equal(stranger.address);
+      // Ownable2Step: a later transferOwnership overwrites the pending owner; transferring to self clears it
+      await tl.call(usnAddr, 0, NONE, enc('transferOwnership', [tlAddr]));
+      await expect(
+        usn.connect(stranger).acceptOwnership()
+      ).to.be.revertedWithCustomError(usn, 'OwnableUnauthorizedAccount');
+      expect(await usn.owner()).to.equal(tlAddr);
+    });
+
+    it('USN moved out and back under the timelock keeps the delay map', async function () {
+      // out, through the delayed path
+      const out = enc('transferOwnership', [safe.address]);
+      const eta = (await now()) + OWNER_DELAY + 60n;
+      await tl.queue(usnAddr, 0, NONE, out, eta);
+      await time.increaseTo(eta);
+      await tl.execute(usnAddr, 0, NONE, out, eta);
+      await usn.connect(safe).acceptOwnership();
+      // while Safe-owned, the Safe is unconstrained (that is the point of delaying the exit)
+      await usn.connect(safe).setAdmin(newAdmin.address);
+      expect(await usn.admin()).to.equal(newAdmin.address);
+      // back in: Safe offers, timelock accepts through the direct path
+      await usn.connect(safe).transferOwnership(tlAddr);
+      await tl.call(usnAddr, 0, NONE, enc('acceptOwnership'));
+      expect(await usn.owner()).to.equal(tlAddr);
+      expect(await tl.delay(usnAddr, sel('setAdmin'))).to.equal(ADMIN_DELAY);
+      await expect(
+        tl.call(usnAddr, 0, NONE, enc('setAdmin', [safe.address]))
+      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
+      await tl.connect(guardian).guardianCall(usnAddr, NONE, enc('pause'));
+      expect(await usn.paused()).to.equal(true);
+    });
+
+    it('a timelock that does not own USN cannot do anything to it', async function () {
+      const TL = await ethers.getContractFactory('SelectiveTimelock');
+      const other = (await TL.deploy(
+        safe.address
+      )) as unknown as SelectiveTimelock;
+      await other.setGuardian(guardian.address, true);
+      await other.setGuardianSelector(usnAddr, sel('pause'), true);
+      await expect(
+        other.call(usnAddr, 0, NONE, enc('pause'))
+      ).to.be.revertedWithCustomError(other, 'CallReverted');
+      await expect(
+        other.connect(guardian).guardianCall(usnAddr, NONE, enc('pause'))
+      ).to.be.revertedWithCustomError(other, 'CallReverted');
+      expect(await usn.paused()).to.equal(false);
+    });
+
+    it('renouncing the timelock itself orphans USN as well (same exposure as GenericTimelock)', async function () {
+      await tl.renounceOwnership();
+      expect(await tl.owner()).to.equal(ethers.ZeroAddress);
+      await expect(
+        tl.call(usnAddr, 0, NONE, enc('unpause'))
+      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+      // only guardians retain a path, and only the allow-list
+      await tl.connect(guardian).guardianCall(usnAddr, NONE, enc('pause'));
+      expect(await usn.paused()).to.equal(true);
+    });
+  });
 });

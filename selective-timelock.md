@@ -44,6 +44,18 @@ cancelDelayChange(target, selector)
 - Timelock ownership rotates with Ownable2Step and is not delayed. A new owner inherits the same map.
 - Proxy upgrades are unaffected: USN's ProxyAdmin stays behind the 48h upgrade Timelock.
 
+## Security considerations
+
+The timelock only delays the selectors it is told to. Everything below is covered by tests in `test/SelectiveTimelock.test.ts`.
+
+- **`transferOwnership` and `renounceOwnership` of the target must carry a delay at least as long as the longest delayed selector on that target.** With `transferOwnership` at 0 the Safe can `call` it, accept from the Safe and call `setAdmin` directly, a few seconds later (test "BYPASS: with transferOwnership at delay 0"). With `renounceOwnership` at 0 the Safe can orphan USN at once: no owner, so no `setAdmin`, no `unpause`, ever. The deploy script sets both to 24h. The contract does not enforce this invariant, so keep it in mind whenever a delay is lowered.
+- **Lowering any delay waits the current delay of that pair.** Including lowering `transferOwnership` to 0. So the bypass above can only be reached after a 24h public window.
+- **A guardian can pause and blacklist at will, including blacklisting the minter or the treasury.** The Safe reverses both instantly (`unpause`, `unblacklistAccount`) and can remove the guardian instantly. A guardian cannot unpause, unblacklist, change delays, or reach any function of the timelock itself (those are `onlyOwner`, and `guardianCall` makes `msg.sender` the timelock, not the owner).
+- **The timelock's own ownership (Ownable2Step) is not delayed**, same as GenericTimelock. A new owner inherits the map. `renounceOwnership` on the timelock orphans USN the same way (only the guardian allow-list keeps working). Treat the Safe's ownership of the timelock as governance, not as something the timelock defends against.
+- **Selector gating is by selector only.** A function that reaches the same state through another selector is not covered. On USN the admin is set only by `setAdmin`, and the proxy implementation is controlled by the ProxyAdmin behind the 48h upgrade Timelock, which this contract does not touch.
+- **Delay changes apply to operations queued afterwards.** A queued operation keeps its eta. Raising a delay therefore does not stretch an operation that was already queued under the old delay.
+- **Value**: `call` and `execute` forward exactly `msg.value`; there is no receive or fallback, so no ETH accumulates in the timelock.
+
 ## Operations
 
 New minter:
