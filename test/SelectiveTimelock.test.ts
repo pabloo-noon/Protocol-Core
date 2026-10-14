@@ -570,4 +570,139 @@ describe('SelectiveTimelock', function () {
       );
     });
   });
+
+  describe('pause and blacklist through the timelock (direct path)', function () {
+    const AMOUNT = ethers.parseUnits('100', 18);
+    beforeEach(async function () {
+      // Safe is the USN admin (minter) in this fixture; fund a holder
+      await usn.connect(safe).mint(stranger.address, AMOUNT);
+      expect(await usn.balanceOf(stranger.address)).to.equal(AMOUNT);
+    });
+
+    it('Safe pauses in one tx: transfers, mints and burns stop; unpause restores them', async function () {
+      await expect(tl.call(usnAddr, 0, 'pause()', '0x'))
+        .to.emit(usn, 'Paused')
+        .withArgs(tlAddr);
+      expect(await usn.paused()).to.equal(true);
+      await expect(
+        usn.connect(stranger).transfer(other.address, 1n)
+      ).to.be.revertedWithCustomError(usn, 'EnforcedPause');
+      await expect(
+        usn.connect(safe).mint(other.address, 1n)
+      ).to.be.revertedWithCustomError(usn, 'EnforcedPause');
+      // and the Safe cannot pause/unpause USN directly any more: the owner is the timelock
+      await expect(usn.connect(safe).unpause()).to.be.revertedWithCustomError(
+        usn,
+        'OwnableUnauthorizedAccount'
+      );
+      await expect(tl.call(usnAddr, 0, 'unpause()', '0x'))
+        .to.emit(usn, 'Unpaused')
+        .withArgs(tlAddr);
+      await usn.connect(stranger).transfer(other.address, 1n);
+      expect(await usn.balanceOf(other.address)).to.equal(1n);
+    });
+
+    it('no one but the Safe can pause, directly or through the timelock', async function () {
+      await expect(
+        tl.connect(other).call(usnAddr, 0, 'pause()', '0x')
+      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+      await expect(usn.connect(safe).pause()).to.be.revertedWithCustomError(
+        usn,
+        'OwnableUnauthorizedAccount'
+      );
+      await expect(usn.connect(other).pause()).to.be.revertedWithCustomError(
+        usn,
+        'OwnableUnauthorizedAccount'
+      );
+      expect(await usn.paused()).to.equal(false);
+    });
+
+    it("pause is idempotent-safe: pausing twice bubbles USN's EnforcedPause, unpausing twice bubbles ExpectedPause", async function () {
+      await tl.call(usnAddr, 0, 'pause()', '0x');
+      await expect(
+        tl.call(usnAddr, 0, 'pause()', '0x')
+      ).to.be.revertedWithCustomError(tl, 'CallReverted');
+      await tl.call(usnAddr, 0, 'unpause()', '0x');
+      await expect(
+        tl.call(usnAddr, 0, 'unpause()', '0x')
+      ).to.be.revertedWithCustomError(tl, 'CallReverted');
+    });
+
+    it('a pause does not block the delayed path: a queued setAdmin still executes while paused', async function () {
+      const data = enc('setAdmin', [newAdmin.address]);
+      const eta = (await now()) + ADMIN_DELAY + 60n;
+      await tl.queue(usnAddr, 0, NONE, data, eta);
+      await tl.call(usnAddr, 0, 'pause()', '0x');
+      await time.increaseTo(eta);
+      await tl.execute(usnAddr, 0, NONE, data, eta);
+      expect(await usn.admin()).to.equal(newAdmin.address);
+      expect(await usn.paused()).to.equal(true);
+      // the new admin cannot mint until the Safe unpauses
+      await expect(
+        usn.connect(newAdmin).mint(other.address, 1n)
+      ).to.be.revertedWithCustomError(usn, 'EnforcedPause');
+      await tl.call(usnAddr, 0, 'unpause()', '0x');
+      await usn.connect(newAdmin).mint(other.address, 1n);
+      expect(await usn.balanceOf(other.address)).to.equal(1n);
+    });
+
+    it('blacklist in one tx: the account can neither send nor receive; unblacklist restores', async function () {
+      await tl.call(
+        usnAddr,
+        0,
+        'blacklistAccount(address)',
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ['address'],
+          [stranger.address]
+        )
+      );
+      expect(await usn.blacklist(stranger.address)).to.equal(true);
+      await expect(
+        usn.connect(stranger).transfer(other.address, 1n)
+      ).to.be.revertedWithCustomError(usn, 'BlacklistedAddress');
+      await expect(
+        usn.connect(safe).mint(stranger.address, 1n)
+      ).to.be.revertedWithCustomError(usn, 'BlacklistedAddress');
+      // others keep moving
+      await usn.connect(safe).mint(other.address, 1n);
+      await tl.call(
+        usnAddr,
+        0,
+        NONE,
+        enc('unblacklistAccount', [stranger.address])
+      );
+      await usn.connect(stranger).transfer(other.address, 1n);
+      expect(await usn.balanceOf(other.address)).to.equal(2n);
+    });
+
+    it('pause can also be announced through queue with eta = now, and still executes at once', async function () {
+      const eta = await now();
+      await tl.queue(usnAddr, 0, 'pause()', '0x', eta + 1n);
+      await tl.execute(usnAddr, 0, 'pause()', '0x', eta + 1n);
+      expect(await usn.paused()).to.equal(true);
+    });
+
+    it('DO NOT: putting pause under a delay makes the emergency path slow', async function () {
+      await tl.scheduleDelayChange(usnAddr, sel('pause'), HOUR); // fresh pair -> immediate
+      await tl.executeDelayChange(usnAddr, sel('pause'));
+      await expect(tl.call(usnAddr, 0, 'pause()', '0x'))
+        .to.be.revertedWithCustomError(tl, 'SelectorIsDelayed')
+        .withArgs(usnAddr, sel('pause'), HOUR);
+      const eta = (await now()) + HOUR + 60n;
+      await tl.queue(usnAddr, 0, 'pause()', '0x', eta);
+      await expect(
+        tl.execute(usnAddr, 0, 'pause()', '0x', eta)
+      ).to.be.revertedWithCustomError(tl, 'OperationNotReady');
+      expect(await usn.paused()).to.equal(false);
+      // undoing it waits the 1h it now carries
+      await tl.scheduleDelayChange(usnAddr, sel('pause'), 0);
+      await expect(
+        tl.executeDelayChange(usnAddr, sel('pause'))
+      ).to.be.revertedWithCustomError(tl, 'DelayChangeNotReady');
+      await time.increase(HOUR);
+      await tl.executeDelayChange(usnAddr, sel('pause'));
+      await tl.call(usnAddr, 0, 'pause()', '0x');
+      expect(await usn.paused()).to.equal(true);
+    });
+  });
 });
