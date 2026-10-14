@@ -1,0 +1,510 @@
+import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
+import { time } from '@nomicfoundation/hardhat-network-helpers';
+import { expect } from 'chai';
+import { ethers, upgrades } from 'hardhat';
+import type {
+  SelectiveTimelock,
+  USNUpgradeableHyperlane,
+} from '../typechain-types';
+
+const HOUR = 3600n;
+const DAY = 24n * HOUR;
+const ADMIN_DELAY = 24n * HOUR; // USN.setAdmin
+const OWNER_DELAY = 48n * HOUR; // USN.transferOwnership / renounceOwnership
+const MAX_DELAY = 30n * DAY;
+const GRACE = 14n * DAY;
+const NONE = ''; // empty signature: data is raw calldata
+
+describe('SelectiveTimelock', function () {
+  let safe: HardhatEthersSigner;
+  let guardian: HardhatEthersSigner;
+  let stranger: HardhatEthersSigner;
+  let newAdmin: HardhatEthersSigner;
+  let usn: USNUpgradeableHyperlane;
+  let tl: SelectiveTimelock;
+  let usnAddr: string;
+  let tlAddr: string;
+  let usnIface: any;
+
+  const sel = (fn: string) => usnIface.getFunction(fn).selector as string;
+  const enc = (fn: string, args: any[] = []) =>
+    usnIface.encodeFunctionData(fn, args) as string;
+  const now = async () => BigInt(await time.latest());
+  const setDelay = async (fn: string, d: bigint) => {
+    await tl.scheduleDelayChange(usnAddr, sel(fn), d);
+    await tl.executeDelayChange(usnAddr, sel(fn)); // current delay 0 -> immediate
+  };
+
+  beforeEach(async function () {
+    [safe, guardian, stranger, newAdmin] = await ethers.getSigners();
+
+    const Endpoint = await ethers.getContractFactory('EndpointV2Mock');
+    const endpoint = await Endpoint.deploy(1);
+    const USN = await ethers.getContractFactory('USNUpgradeableHyperlane');
+    usnIface = USN.interface;
+    const proxy = await upgrades.deployProxy(
+      USN,
+      ['USN', 'USN', safe.address],
+      {
+        initializer: 'initialize',
+        constructorArgs: [await endpoint.getAddress()],
+        unsafeAllow: ['constructor'],
+      }
+    );
+    usn = USN.attach(
+      await proxy.getAddress()
+    ) as unknown as USNUpgradeableHyperlane;
+    usnAddr = await usn.getAddress();
+    await usn.enablePermissionless();
+    await usn.setAdmin(safe.address);
+
+    const TL = await ethers.getContractFactory('SelectiveTimelock');
+    tl = (await TL.deploy(safe.address)) as unknown as SelectiveTimelock;
+    tlAddr = await tl.getAddress();
+
+    // wiring: setAdmin 24h; transferOwnership / renounceOwnership 48h; guardian = pause / blacklistAccount
+    await setDelay('setAdmin', ADMIN_DELAY);
+    await setDelay('transferOwnership', OWNER_DELAY);
+    await setDelay('renounceOwnership', OWNER_DELAY);
+    for (const fn of ['pause', 'blacklistAccount'])
+      await tl.setGuardianSelector(usnAddr, sel(fn), true);
+    await tl.setGuardian(guardian.address, true);
+
+    // hand USN over (Ownable2Step): Safe transfers, timelock accepts through the direct path
+    await usn.transferOwnership(tlAddr);
+    await tl.call(usnAddr, 0, NONE, enc('acceptOwnership'));
+    expect(await usn.owner()).to.equal(tlAddr);
+  });
+
+  describe('construction and wiring', function () {
+    it('stores per-selector delays, zero elsewhere', async function () {
+      expect(await tl.owner()).to.equal(safe.address);
+      expect(await tl.MAX_DELAY()).to.equal(MAX_DELAY);
+      expect(await tl.GRACE_PERIOD()).to.equal(GRACE);
+      expect(await tl.delay(usnAddr, sel('setAdmin'))).to.equal(ADMIN_DELAY);
+      expect(await tl.delay(usnAddr, sel('transferOwnership'))).to.equal(
+        OWNER_DELAY
+      );
+      expect(await tl.delay(usnAddr, sel('pause'))).to.equal(0);
+    });
+    it('delayFor resolves both calldata conventions', async function () {
+      expect(await tl.delayFor(usnAddr, NONE, enc('pause'))).to.equal(0);
+      expect(
+        await tl.delayFor(usnAddr, NONE, enc('setAdmin', [newAdmin.address]))
+      ).to.equal(ADMIN_DELAY);
+      expect(
+        await tl.delayFor(
+          usnAddr,
+          'setAdmin(address)',
+          ethers.AbiCoder.defaultAbiCoder().encode(
+            ['address'],
+            [newAdmin.address]
+          )
+        )
+      ).to.equal(ADMIN_DELAY);
+      await expect(
+        tl.delayFor(usnAddr, NONE, '0x1234')
+      ).to.be.revertedWithCustomError(tl, 'BadCalldata');
+    });
+  });
+
+  describe('direct path (call)', function () {
+    it('owner runs zero-delay owner functions immediately', async function () {
+      await expect(
+        tl.call(usnAddr, 0, NONE, enc('addToWhitelist', [stranger.address]))
+      )
+        .to.emit(tl, 'DirectCall')
+        .withArgs(
+          usnAddr,
+          0,
+          NONE,
+          enc('addToWhitelist', [stranger.address]),
+          '0x'
+        );
+      expect(await usn.isWhitelisted(stranger.address)).to.equal(true);
+      await tl.call(usnAddr, 0, 'pause()', '0x');
+      expect(await usn.paused()).to.equal(true);
+      await tl.call(usnAddr, 0, NONE, enc('unpause'));
+      expect(await usn.paused()).to.equal(false);
+    });
+    it('refuses delayed selectors in both conventions and reports the delay', async function () {
+      await expect(
+        tl.call(usnAddr, 0, NONE, enc('setAdmin', [newAdmin.address]))
+      )
+        .to.be.revertedWithCustomError(tl, 'SelectorIsDelayed')
+        .withArgs(usnAddr, sel('setAdmin'), ADMIN_DELAY);
+      await expect(
+        tl.call(
+          usnAddr,
+          0,
+          'setAdmin(address)',
+          ethers.AbiCoder.defaultAbiCoder().encode(
+            ['address'],
+            [newAdmin.address]
+          )
+        )
+      )
+        .to.be.revertedWithCustomError(tl, 'SelectorIsDelayed')
+        .withArgs(usnAddr, sel('setAdmin'), ADMIN_DELAY);
+      await expect(
+        tl.call(usnAddr, 0, NONE, enc('transferOwnership', [stranger.address]))
+      )
+        .to.be.revertedWithCustomError(tl, 'SelectorIsDelayed')
+        .withArgs(usnAddr, sel('transferOwnership'), OWNER_DELAY);
+      await expect(
+        tl.call(usnAddr, 0, NONE, enc('renounceOwnership'))
+      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
+      expect(await usn.admin()).to.equal(safe.address);
+      expect(await usn.owner()).to.equal(tlAddr);
+    });
+    it('only the owner', async function () {
+      await expect(
+        tl.connect(guardian).call(usnAddr, 0, NONE, enc('pause'))
+      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+    });
+    it('bubbles target reverts and checks value / calldata shape', async function () {
+      await expect(
+        tl.call(usnAddr, 0, NONE, enc('setRateLimiter', [stranger.address]))
+      ).to.be.revertedWithCustomError(tl, 'CallReverted');
+      await expect(
+        tl.call(usnAddr, 1, NONE, enc('pause'))
+      ).to.be.revertedWithCustomError(tl, 'ValueMismatch');
+      await expect(
+        tl.call(usnAddr, 0, NONE, '0x1234')
+      ).to.be.revertedWithCustomError(tl, 'BadCalldata');
+    });
+  });
+
+  describe('guardian path (guardianCall)', function () {
+    it('guardian pauses and blacklists instantly', async function () {
+      await expect(tl.connect(guardian).guardianCall(usnAddr, 'pause()', '0x'))
+        .to.emit(tl, 'GuardianCall')
+        .withArgs(guardian.address, usnAddr, 'pause()', '0x', '0x');
+      expect(await usn.paused()).to.equal(true);
+      await tl
+        .connect(guardian)
+        .guardianCall(
+          usnAddr,
+          NONE,
+          enc('blacklistAccount', [stranger.address])
+        );
+      expect(await usn.blacklist(stranger.address)).to.equal(true);
+    });
+    it('guardian cannot unpause, unblacklist, or touch anything outside the allow-list', async function () {
+      await expect(
+        tl.connect(guardian).guardianCall(usnAddr, NONE, enc('unpause'))
+      )
+        .to.be.revertedWithCustomError(tl, 'SelectorNotGuardian')
+        .withArgs(usnAddr, sel('unpause'));
+      await expect(
+        tl
+          .connect(guardian)
+          .guardianCall(
+            usnAddr,
+            NONE,
+            enc('unblacklistAccount', [stranger.address])
+          )
+      ).to.be.revertedWithCustomError(tl, 'SelectorNotGuardian');
+      await expect(
+        tl
+          .connect(guardian)
+          .guardianCall(usnAddr, NONE, enc('setAdmin', [guardian.address]))
+      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
+      await expect(
+        tl
+          .connect(guardian)
+          .guardianCall(
+            tlAddr,
+            NONE,
+            tl.interface.encodeFunctionData('setGuardian', [
+              stranger.address,
+              true,
+            ])
+          )
+      ).to.be.revertedWithCustomError(tl, 'SelectorNotGuardian');
+    });
+    it('non-guardians are rejected, removed guardians too', async function () {
+      await expect(
+        tl.connect(stranger).guardianCall(usnAddr, NONE, enc('pause'))
+      )
+        .to.be.revertedWithCustomError(tl, 'NotGuardian')
+        .withArgs(stranger.address);
+      await expect(tl.setGuardian(guardian.address, false))
+        .to.emit(tl, 'GuardianUpdated')
+        .withArgs(guardian.address, false);
+      await expect(
+        tl.connect(guardian).guardianCall(usnAddr, NONE, enc('pause'))
+      ).to.be.revertedWithCustomError(tl, 'NotGuardian');
+    });
+    it('a delayed pair can never be allow-listed; delaying an allow-listed pair closes it', async function () {
+      await expect(
+        tl.setGuardianSelector(usnAddr, sel('setAdmin'), true)
+      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
+      await setDelay('pause', HOUR); // current 0 -> immediate
+      await expect(
+        tl.connect(guardian).guardianCall(usnAddr, NONE, enc('pause'))
+      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
+      await expect(
+        tl.call(usnAddr, 0, NONE, enc('pause'))
+      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
+    });
+    it('only the owner manages guardians and the allow-list', async function () {
+      await expect(
+        tl.connect(guardian).setGuardian(stranger.address, true)
+      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+      await expect(
+        tl.connect(guardian).setGuardianSelector(usnAddr, sel('unpause'), true)
+      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+      await expect(
+        tl.setGuardian(ethers.ZeroAddress, true)
+      ).to.be.revertedWithCustomError(tl, 'ZeroAddress');
+      await expect(
+        tl.setGuardianSelector(ethers.ZeroAddress, sel('unpause'), true)
+      ).to.be.revertedWithCustomError(tl, 'ZeroAddress');
+    });
+  });
+
+  describe('queue / execute / cancel: setAdmin (24h)', function () {
+    let data: string;
+    let eta: bigint;
+    let opHash: string;
+    beforeEach(async function () {
+      data = enc('setAdmin', [newAdmin.address]);
+      eta = (await now()) + ADMIN_DELAY + 60n;
+      opHash = await tl.hashOperation(usnAddr, 0, NONE, data, eta);
+    });
+
+    it('queue enforces eta >= now + the pair delay', async function () {
+      const tooSoon = (await now()) + ADMIN_DELAY - HOUR;
+      await expect(
+        tl.queue(usnAddr, 0, NONE, data, tooSoon)
+      ).to.be.revertedWithCustomError(tl, 'EtaTooSoon');
+      await expect(tl.queue(usnAddr, 0, NONE, data, eta))
+        .to.emit(tl, 'OperationQueued')
+        .withArgs(opHash, usnAddr, 0, NONE, data, eta);
+      expect(await tl.queued(opHash)).to.equal(true);
+      await expect(
+        tl.queue(usnAddr, 0, NONE, data, eta)
+      ).to.be.revertedWithCustomError(tl, 'OperationAlreadyQueued');
+    });
+    it('executes from the eta, once, and changes the admin', async function () {
+      await tl.queue(usnAddr, 0, NONE, data, eta);
+      await expect(
+        tl.execute(usnAddr, 0, NONE, data, eta)
+      ).to.be.revertedWithCustomError(tl, 'OperationNotReady');
+      await time.increaseTo(eta - 2n); // next block mines at eta - 1
+      await expect(
+        tl.execute(usnAddr, 0, NONE, data, eta)
+      ).to.be.revertedWithCustomError(tl, 'OperationNotReady');
+      await time.increaseTo(eta);
+      await expect(tl.execute(usnAddr, 0, NONE, data, eta))
+        .to.emit(tl, 'OperationExecuted')
+        .withArgs(opHash, usnAddr, 0, NONE, data, '0x');
+      expect(await usn.admin()).to.equal(newAdmin.address);
+      expect(await tl.queued(opHash)).to.equal(false);
+      await expect(
+        tl.execute(usnAddr, 0, NONE, data, eta)
+      ).to.be.revertedWithCustomError(tl, 'OperationNotQueued');
+    });
+    it('signature convention works end to end', async function () {
+      const args = ethers.AbiCoder.defaultAbiCoder().encode(
+        ['address'],
+        [newAdmin.address]
+      );
+      await tl.queue(usnAddr, 0, 'setAdmin(address)', args, eta);
+      expect(await tl.buildCalldata('setAdmin(address)', args)).to.equal(data);
+      await time.increaseTo(eta);
+      await tl.execute(usnAddr, 0, 'setAdmin(address)', args, eta);
+      expect(await usn.admin()).to.equal(newAdmin.address);
+    });
+    it('each selector waits its own delay', async function () {
+      const own = enc('transferOwnership', [stranger.address]);
+      await expect(tl.queue(usnAddr, 0, NONE, own, eta)) // 24h+60s < 48h
+        .to.be.revertedWithCustomError(tl, 'EtaTooSoon');
+      const ownEta = (await now()) + OWNER_DELAY + 60n;
+      await tl.queue(usnAddr, 0, NONE, own, ownEta);
+      await tl.queue(usnAddr, 0, NONE, data, eta);
+      await time.increaseTo(eta);
+      await tl.execute(usnAddr, 0, NONE, data, eta);
+      await expect(
+        tl.execute(usnAddr, 0, NONE, own, ownEta)
+      ).to.be.revertedWithCustomError(tl, 'OperationNotReady');
+      await time.increaseTo(ownEta);
+      await tl.execute(usnAddr, 0, NONE, own, ownEta);
+      expect(await usn.pendingOwner()).to.equal(stranger.address);
+    });
+    it('expires after the grace period', async function () {
+      await tl.queue(usnAddr, 0, NONE, data, eta);
+      await time.increaseTo(eta + GRACE + 1n);
+      await expect(
+        tl.execute(usnAddr, 0, NONE, data, eta)
+      ).to.be.revertedWithCustomError(tl, 'OperationExpired');
+      expect(await usn.admin()).to.equal(safe.address);
+    });
+    it('cancel removes it', async function () {
+      await tl.queue(usnAddr, 0, NONE, data, eta);
+      await expect(tl.cancel(usnAddr, 0, NONE, data, eta))
+        .to.emit(tl, 'OperationCancelled')
+        .withArgs(opHash);
+      await expect(
+        tl.cancel(usnAddr, 0, NONE, data, eta)
+      ).to.be.revertedWithCustomError(tl, 'OperationNotQueued');
+      await time.increaseTo(eta);
+      await expect(
+        tl.execute(usnAddr, 0, NONE, data, eta)
+      ).to.be.revertedWithCustomError(tl, 'OperationNotQueued');
+    });
+    it('only the owner queues / executes / cancels', async function () {
+      await expect(
+        tl.connect(guardian).queue(usnAddr, 0, NONE, data, eta)
+      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+      await tl.queue(usnAddr, 0, NONE, data, eta);
+      await time.increaseTo(eta);
+      await expect(
+        tl.connect(guardian).execute(usnAddr, 0, NONE, data, eta)
+      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+      await expect(
+        tl.connect(guardian).cancel(usnAddr, 0, NONE, data, eta)
+      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+    });
+    it('value must match and target reverts bubble up', async function () {
+      const bad = enc('setAdmin', [ethers.ZeroAddress]);
+      await tl.queue(usnAddr, 0, NONE, bad, eta);
+      await tl.queue(usnAddr, 0, NONE, data, eta);
+      await time.increaseTo(eta);
+      await expect(
+        tl.execute(usnAddr, 0, NONE, bad, eta)
+      ).to.be.revertedWithCustomError(tl, 'CallReverted');
+      await expect(
+        tl.execute(usnAddr, 0, NONE, data, eta, { value: 1 })
+      ).to.be.revertedWithCustomError(tl, 'ValueMismatch');
+    });
+    it('zero-delay calls may still be queued (eta >= now) while the direct path stays open', async function () {
+      const wl = enc('addToWhitelist', [stranger.address]);
+      const soon = (await now()) + 60n;
+      await tl.queue(usnAddr, 0, NONE, wl, soon);
+      await tl.call(
+        usnAddr,
+        0,
+        NONE,
+        enc('removeFromWhitelist', [stranger.address])
+      );
+      await time.increaseTo(soon);
+      await tl.execute(usnAddr, 0, NONE, wl, soon);
+      expect(await usn.isWhitelisted(stranger.address)).to.equal(true);
+    });
+  });
+
+  describe('delay changes (two-step, current delay applies)', function () {
+    it('lowering setAdmin from 24h to 0 waits 24h, then the pair is direct', async function () {
+      const tx = await tl.scheduleDelayChange(usnAddr, sel('setAdmin'), 0);
+      const ts = BigInt((await tx.getBlock())!.timestamp);
+      await expect(tx)
+        .to.emit(tl, 'DelayChangeScheduled')
+        .withArgs(usnAddr, sel('setAdmin'), 0, ts + ADMIN_DELAY);
+      expect(await tl.pendingDelay(usnAddr, sel('setAdmin'))).to.equal(0);
+      expect(await tl.pendingDelayEta(usnAddr, sel('setAdmin'))).to.equal(
+        ts + ADMIN_DELAY
+      );
+      await expect(
+        tl.executeDelayChange(usnAddr, sel('setAdmin'))
+      ).to.be.revertedWithCustomError(tl, 'DelayChangeNotReady');
+      await expect(
+        tl.call(usnAddr, 0, NONE, enc('setAdmin', [newAdmin.address]))
+      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed'); // still 24h meanwhile
+      await time.increaseTo(ts + ADMIN_DELAY);
+      await expect(tl.executeDelayChange(usnAddr, sel('setAdmin')))
+        .to.emit(tl, 'DelayUpdated')
+        .withArgs(usnAddr, sel('setAdmin'), ADMIN_DELAY, 0);
+      expect(await tl.delay(usnAddr, sel('setAdmin'))).to.equal(0);
+      expect(await tl.pendingDelayEta(usnAddr, sel('setAdmin'))).to.equal(0);
+      await tl.call(usnAddr, 0, NONE, enc('setAdmin', [newAdmin.address]));
+      expect(await usn.admin()).to.equal(newAdmin.address);
+    });
+    it('raising also waits the current delay; a new pair is immediate', async function () {
+      await tl.scheduleDelayChange(usnAddr, sel('setAdmin'), 72n * HOUR);
+      await expect(
+        tl.executeDelayChange(usnAddr, sel('setAdmin'))
+      ).to.be.revertedWithCustomError(tl, 'DelayChangeNotReady');
+      await time.increase(ADMIN_DELAY);
+      await tl.executeDelayChange(usnAddr, sel('setAdmin'));
+      expect(await tl.delay(usnAddr, sel('setAdmin'))).to.equal(72n * HOUR);
+      // fresh pair: current 0 -> executable right away
+      await tl.scheduleDelayChange(usnAddr, sel('setRateLimiter'), 6n * HOUR);
+      await tl.executeDelayChange(usnAddr, sel('setRateLimiter'));
+      expect(await tl.delay(usnAddr, sel('setRateLimiter'))).to.equal(
+        6n * HOUR
+      );
+    });
+    it('one pending change per pair; cancel clears it', async function () {
+      await tl.scheduleDelayChange(usnAddr, sel('setAdmin'), 0);
+      await expect(
+        tl.scheduleDelayChange(usnAddr, sel('setAdmin'), HOUR)
+      ).to.be.revertedWithCustomError(tl, 'DelayChangeAlreadyPending');
+      await tl.scheduleDelayChange(usnAddr, sel('transferOwnership'), 0); // other pair is independent
+      await expect(tl.cancelDelayChange(usnAddr, sel('setAdmin')))
+        .to.emit(tl, 'DelayChangeCancelled')
+        .withArgs(usnAddr, sel('setAdmin'), 0);
+      await expect(
+        tl.cancelDelayChange(usnAddr, sel('setAdmin'))
+      ).to.be.revertedWithCustomError(tl, 'NoPendingDelayChange');
+      await expect(
+        tl.executeDelayChange(usnAddr, sel('setAdmin'))
+      ).to.be.revertedWithCustomError(tl, 'NoPendingDelayChange');
+      await time.increase(ADMIN_DELAY);
+      expect(await tl.delay(usnAddr, sel('setAdmin'))).to.equal(ADMIN_DELAY);
+    });
+    it('bounds, zero target, owner only', async function () {
+      await expect(
+        tl.scheduleDelayChange(usnAddr, sel('setAdmin'), MAX_DELAY + 1n)
+      ).to.be.revertedWithCustomError(tl, 'DelayOutOfBounds');
+      await expect(
+        tl.scheduleDelayChange(ethers.ZeroAddress, sel('setAdmin'), HOUR)
+      ).to.be.revertedWithCustomError(tl, 'ZeroAddress');
+      await expect(
+        tl.connect(guardian).scheduleDelayChange(usnAddr, sel('unpause'), HOUR)
+      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+      await expect(
+        tl.connect(guardian).executeDelayChange(usnAddr, sel('setAdmin'))
+      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+      await expect(
+        tl.connect(guardian).cancelDelayChange(usnAddr, sel('setAdmin'))
+      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+    });
+    it('an already-queued op keeps its eta when the delay changes', async function () {
+      const data = enc('setAdmin', [newAdmin.address]);
+      const eta = (await now()) + ADMIN_DELAY + 60n;
+      await tl.queue(usnAddr, 0, NONE, data, eta);
+      await tl.scheduleDelayChange(usnAddr, sel('setAdmin'), 72n * HOUR);
+      await time.increaseTo(eta);
+      await tl.executeDelayChange(usnAddr, sel('setAdmin'));
+      await tl.execute(usnAddr, 0, NONE, data, eta);
+      expect(await usn.admin()).to.equal(newAdmin.address);
+    });
+  });
+
+  describe('leaving the timelock', function () {
+    it('transferOwnership of USN waits its delay, then the new owner accepts', async function () {
+      const data = enc('transferOwnership', [stranger.address]);
+      const eta = (await now()) + OWNER_DELAY + 60n;
+      await tl.queue(usnAddr, 0, NONE, data, eta);
+      await time.increaseTo(eta);
+      await tl.execute(usnAddr, 0, NONE, data, eta);
+      expect(await usn.pendingOwner()).to.equal(stranger.address);
+      await usn.connect(stranger).acceptOwnership();
+      expect(await usn.owner()).to.equal(stranger.address);
+    });
+    it('timelock ownership rotates with Ownable2Step and keeps the map', async function () {
+      await tl.transferOwnership(stranger.address);
+      await tl.connect(stranger).acceptOwnership();
+      await expect(
+        tl
+          .connect(stranger)
+          .call(usnAddr, 0, NONE, enc('setAdmin', [stranger.address]))
+      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
+      await expect(
+        tl.call(usnAddr, 0, NONE, enc('pause'))
+      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+    });
+  });
+});
