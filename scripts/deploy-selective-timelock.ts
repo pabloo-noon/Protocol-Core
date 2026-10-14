@@ -1,7 +1,7 @@
 /**
  * Deploy a SelectiveTimelock in front of USN and wire it:
  *   delay 24h : USN.setAdmin, USN.transferOwnership, USN.renounceOwnership
- *   guardian  : USN.pause, USN.blacklistAccount
+ *   direct    : everything else (pause, unpause, blacklist, whitelist, ...) — the Safe calls them through timelock.call
  * The deployer is the initial owner so it can wire the map in the same run (a fresh pair has delay 0, so
  * scheduleDelayChange + executeDelayChange apply at once), then hands the timelock to the Safe (Ownable2Step).
  * Nothing changes on USN itself here — the Safe later executes one batch:
@@ -11,7 +11,7 @@
  *
  *   npx hardhat run scripts/deploy-selective-timelock.ts --network mainnet            dry run (prints the plan)
  *   BROADCAST=true npx hardhat run scripts/deploy-selective-timelock.ts --network mainnet
- * Env: SAFE (owner after hand-over), USN (target), GUARDIAN (comma-separated), DELAY (seconds, default 86400).
+ * Env: SAFE (owner after hand-over), USN (target), DELAY (seconds, default 86400).
  * Verify afterwards from a plain shell:
  *   env -u HARDHAT_NETWORK npx hardhat verify --network mainnet <timelock> <deployer>
  */
@@ -20,10 +20,6 @@ import { ethers } from 'hardhat';
 const BROADCAST = process.env.BROADCAST === 'true';
 const SAFE = process.env.SAFE ?? '0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f';
 const USN = process.env.USN ?? '0xdA67B4284609d2d48e5d10cfAc411572727dc1eD';
-const GUARDIANS = (process.env.GUARDIAN ?? SAFE)
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
 const DELAY = BigInt(process.env.DELAY ?? 86400);
 
 const USN_ABI = [
@@ -32,11 +28,8 @@ const USN_ABI = [
   'function setAdmin(address)',
   'function transferOwnership(address)',
   'function renounceOwnership()',
-  'function pause()',
-  'function blacklistAccount(address)',
 ];
 const DELAYED = ['setAdmin', 'transferOwnership', 'renounceOwnership'];
-const GUARDIAN_FNS = ['pause', 'blacklistAccount'];
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -53,9 +46,6 @@ async function main() {
     console.log(
       `  scheduleDelayChange + executeDelayChange(USN, ${fn} ${sel(fn)}, ${DELAY}s = ${Number(DELAY) / 3600}h)`
     );
-  for (const fn of GUARDIAN_FNS)
-    console.log(`  setGuardianSelector(USN, ${fn} ${sel(fn)}, true)`);
-  for (const g of GUARDIANS) console.log(`  setGuardian(${g}, true)`);
   console.log(`  transferOwnership(${SAFE})  -> Safe must acceptOwnership()`);
   if (usnOwner !== SAFE) throw new Error('USN owner is not the Safe');
   if (!BROADCAST) {
@@ -74,14 +64,6 @@ async function main() {
     await (await tl.scheduleDelayChange(USN, sel(fn), DELAY)).wait();
     await (await tl.executeDelayChange(USN, sel(fn))).wait();
     console.log(`  delay ${fn} = ${await tl.delay(USN, sel(fn))}s ✓`);
-  }
-  for (const fn of GUARDIAN_FNS) {
-    await (await tl.setGuardianSelector(USN, sel(fn), true)).wait();
-    console.log(`  guardian selector ${fn} ✓`);
-  }
-  for (const g of GUARDIANS) {
-    await (await tl.setGuardian(g, true)).wait();
-    console.log(`  guardian ${g} ✓`);
   }
   await (await tl.transferOwnership(SAFE)).wait();
   console.log(`  ownership offered to ${SAFE} ✓ (pendingOwner)`);

@@ -17,7 +17,7 @@ const NONE = ''; // empty signature: data is raw calldata
 
 describe('SelectiveTimelock', function () {
   let safe: HardhatEthersSigner;
-  let guardian: HardhatEthersSigner;
+  let other: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
   let newAdmin: HardhatEthersSigner;
   let usn: USNUpgradeableHyperlane;
@@ -36,7 +36,7 @@ describe('SelectiveTimelock', function () {
   };
 
   beforeEach(async function () {
-    [safe, guardian, stranger, newAdmin] = await ethers.getSigners();
+    [safe, other, stranger, newAdmin] = await ethers.getSigners();
 
     const Endpoint = await ethers.getContractFactory('EndpointV2Mock');
     const endpoint = await Endpoint.deploy(1);
@@ -62,13 +62,10 @@ describe('SelectiveTimelock', function () {
     tl = (await TL.deploy(safe.address)) as unknown as SelectiveTimelock;
     tlAddr = await tl.getAddress();
 
-    // wiring: setAdmin 24h; transferOwnership / renounceOwnership 48h; guardian = pause / blacklistAccount
+    // wiring: setAdmin 24h; transferOwnership / renounceOwnership 48h; everything else direct
     await setDelay('setAdmin', ADMIN_DELAY);
     await setDelay('transferOwnership', OWNER_DELAY);
     await setDelay('renounceOwnership', OWNER_DELAY);
-    for (const fn of ['pause', 'blacklistAccount'])
-      await tl.setGuardianSelector(usnAddr, sel(fn), true);
-    await tl.setGuardian(guardian.address, true);
 
     // hand USN over (Ownable2Step): Safe transfers, timelock accepts through the direct path
     await usn.transferOwnership(tlAddr);
@@ -86,6 +83,7 @@ describe('SelectiveTimelock', function () {
         OWNER_DELAY
       );
       expect(await tl.delay(usnAddr, sel('pause'))).to.equal(0);
+      expect(await tl.delay(usnAddr, sel('blacklistAccount'))).to.equal(0);
     });
     it('delayFor resolves both calldata conventions', async function () {
       expect(await tl.delayFor(usnAddr, NONE, enc('pause'))).to.equal(0);
@@ -109,7 +107,7 @@ describe('SelectiveTimelock', function () {
   });
 
   describe('direct path (call)', function () {
-    it('owner runs zero-delay owner functions immediately', async function () {
+    it('owner pauses, unpauses, blacklists and whitelists immediately', async function () {
       await expect(
         tl.call(usnAddr, 0, NONE, enc('addToWhitelist', [stranger.address]))
       )
@@ -126,6 +124,20 @@ describe('SelectiveTimelock', function () {
       expect(await usn.paused()).to.equal(true);
       await tl.call(usnAddr, 0, NONE, enc('unpause'));
       expect(await usn.paused()).to.equal(false);
+      await tl.call(
+        usnAddr,
+        0,
+        NONE,
+        enc('blacklistAccount', [stranger.address])
+      );
+      expect(await usn.blacklist(stranger.address)).to.equal(true);
+      await tl.call(
+        usnAddr,
+        0,
+        NONE,
+        enc('unblacklistAccount', [stranger.address])
+      );
+      expect(await usn.blacklist(stranger.address)).to.equal(false);
     });
     it('refuses delayed selectors in both conventions and reports the delay', async function () {
       await expect(
@@ -159,8 +171,25 @@ describe('SelectiveTimelock', function () {
     });
     it('only the owner', async function () {
       await expect(
-        tl.connect(guardian).call(usnAddr, 0, NONE, enc('pause'))
+        tl.connect(other).call(usnAddr, 0, NONE, enc('pause'))
       ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+      expect(await usn.paused()).to.equal(false);
+    });
+    it("cannot reach the timelock's own owner functions through itself", async function () {
+      // msg.sender would be the timelock, not the owner
+      await expect(
+        tl.call(
+          tlAddr,
+          0,
+          NONE,
+          tl.interface.encodeFunctionData('scheduleDelayChange', [
+            usnAddr,
+            sel('setAdmin'),
+            0,
+          ])
+        )
+      ).to.be.revertedWithCustomError(tl, 'CallReverted');
+      expect(await tl.pendingDelayEta(usnAddr, sel('setAdmin'))).to.equal(0);
     });
     it('bubbles target reverts and checks value / calldata shape', async function () {
       await expect(
@@ -172,95 +201,6 @@ describe('SelectiveTimelock', function () {
       await expect(
         tl.call(usnAddr, 0, NONE, '0x1234')
       ).to.be.revertedWithCustomError(tl, 'BadCalldata');
-    });
-  });
-
-  describe('guardian path (guardianCall)', function () {
-    it('guardian pauses and blacklists instantly', async function () {
-      await expect(tl.connect(guardian).guardianCall(usnAddr, 'pause()', '0x'))
-        .to.emit(tl, 'GuardianCall')
-        .withArgs(guardian.address, usnAddr, 'pause()', '0x', '0x');
-      expect(await usn.paused()).to.equal(true);
-      await tl
-        .connect(guardian)
-        .guardianCall(
-          usnAddr,
-          NONE,
-          enc('blacklistAccount', [stranger.address])
-        );
-      expect(await usn.blacklist(stranger.address)).to.equal(true);
-    });
-    it('guardian cannot unpause, unblacklist, or touch anything outside the allow-list', async function () {
-      await expect(
-        tl.connect(guardian).guardianCall(usnAddr, NONE, enc('unpause'))
-      )
-        .to.be.revertedWithCustomError(tl, 'SelectorNotGuardian')
-        .withArgs(usnAddr, sel('unpause'));
-      await expect(
-        tl
-          .connect(guardian)
-          .guardianCall(
-            usnAddr,
-            NONE,
-            enc('unblacklistAccount', [stranger.address])
-          )
-      ).to.be.revertedWithCustomError(tl, 'SelectorNotGuardian');
-      await expect(
-        tl
-          .connect(guardian)
-          .guardianCall(usnAddr, NONE, enc('setAdmin', [guardian.address]))
-      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
-      await expect(
-        tl
-          .connect(guardian)
-          .guardianCall(
-            tlAddr,
-            NONE,
-            tl.interface.encodeFunctionData('setGuardian', [
-              stranger.address,
-              true,
-            ])
-          )
-      ).to.be.revertedWithCustomError(tl, 'SelectorNotGuardian');
-    });
-    it('non-guardians are rejected, removed guardians too', async function () {
-      await expect(
-        tl.connect(stranger).guardianCall(usnAddr, NONE, enc('pause'))
-      )
-        .to.be.revertedWithCustomError(tl, 'NotGuardian')
-        .withArgs(stranger.address);
-      await expect(tl.setGuardian(guardian.address, false))
-        .to.emit(tl, 'GuardianUpdated')
-        .withArgs(guardian.address, false);
-      await expect(
-        tl.connect(guardian).guardianCall(usnAddr, NONE, enc('pause'))
-      ).to.be.revertedWithCustomError(tl, 'NotGuardian');
-    });
-    it('a delayed pair can never be allow-listed; delaying an allow-listed pair closes it', async function () {
-      await expect(
-        tl.setGuardianSelector(usnAddr, sel('setAdmin'), true)
-      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
-      await setDelay('pause', HOUR); // current 0 -> immediate
-      await expect(
-        tl.connect(guardian).guardianCall(usnAddr, NONE, enc('pause'))
-      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
-      await expect(
-        tl.call(usnAddr, 0, NONE, enc('pause'))
-      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
-    });
-    it('only the owner manages guardians and the allow-list', async function () {
-      await expect(
-        tl.connect(guardian).setGuardian(stranger.address, true)
-      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
-      await expect(
-        tl.connect(guardian).setGuardianSelector(usnAddr, sel('unpause'), true)
-      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
-      await expect(
-        tl.setGuardian(ethers.ZeroAddress, true)
-      ).to.be.revertedWithCustomError(tl, 'ZeroAddress');
-      await expect(
-        tl.setGuardianSelector(ethers.ZeroAddress, sel('unpause'), true)
-      ).to.be.revertedWithCustomError(tl, 'ZeroAddress');
     });
   });
 
@@ -319,8 +259,9 @@ describe('SelectiveTimelock', function () {
     });
     it('each selector waits its own delay', async function () {
       const own = enc('transferOwnership', [stranger.address]);
-      await expect(tl.queue(usnAddr, 0, NONE, own, eta)) // 24h+60s < 48h
-        .to.be.revertedWithCustomError(tl, 'EtaTooSoon');
+      await expect(
+        tl.queue(usnAddr, 0, NONE, own, eta) // 24h+60s < 48h
+      ).to.be.revertedWithCustomError(tl, 'EtaTooSoon');
       const ownEta = (await now()) + OWNER_DELAY + 60n;
       await tl.queue(usnAddr, 0, NONE, own, ownEta);
       await tl.queue(usnAddr, 0, NONE, data, eta);
@@ -356,15 +297,15 @@ describe('SelectiveTimelock', function () {
     });
     it('only the owner queues / executes / cancels', async function () {
       await expect(
-        tl.connect(guardian).queue(usnAddr, 0, NONE, data, eta)
+        tl.connect(other).queue(usnAddr, 0, NONE, data, eta)
       ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
       await tl.queue(usnAddr, 0, NONE, data, eta);
       await time.increaseTo(eta);
       await expect(
-        tl.connect(guardian).execute(usnAddr, 0, NONE, data, eta)
+        tl.connect(other).execute(usnAddr, 0, NONE, data, eta)
       ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
       await expect(
-        tl.connect(guardian).cancel(usnAddr, 0, NONE, data, eta)
+        tl.connect(other).cancel(usnAddr, 0, NONE, data, eta)
       ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
     });
     it('value must match and target reverts bubble up', async function () {
@@ -435,6 +376,9 @@ describe('SelectiveTimelock', function () {
       expect(await tl.delay(usnAddr, sel('setRateLimiter'))).to.equal(
         6n * HOUR
       );
+      await expect(
+        tl.call(usnAddr, 0, NONE, enc('setRateLimiter', [stranger.address]))
+      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
     });
     it('one pending change per pair; cancel clears it', async function () {
       await tl.scheduleDelayChange(usnAddr, sel('setAdmin'), 0);
@@ -462,13 +406,13 @@ describe('SelectiveTimelock', function () {
         tl.scheduleDelayChange(ethers.ZeroAddress, sel('setAdmin'), HOUR)
       ).to.be.revertedWithCustomError(tl, 'ZeroAddress');
       await expect(
-        tl.connect(guardian).scheduleDelayChange(usnAddr, sel('unpause'), HOUR)
+        tl.connect(other).scheduleDelayChange(usnAddr, sel('unpause'), HOUR)
       ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
       await expect(
-        tl.connect(guardian).executeDelayChange(usnAddr, sel('setAdmin'))
+        tl.connect(other).executeDelayChange(usnAddr, sel('setAdmin'))
       ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
       await expect(
-        tl.connect(guardian).cancelDelayChange(usnAddr, sel('setAdmin'))
+        tl.connect(other).cancelDelayChange(usnAddr, sel('setAdmin'))
       ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
     });
     it('an already-queued op keeps its eta when the delay changes', async function () {
@@ -505,6 +449,8 @@ describe('SelectiveTimelock', function () {
       await expect(
         tl.call(usnAddr, 0, NONE, enc('pause'))
       ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+      await tl.connect(stranger).call(usnAddr, 0, NONE, enc('pause'));
+      expect(await usn.paused()).to.equal(true);
     });
   });
 
@@ -597,35 +543,31 @@ describe('SelectiveTimelock', function () {
       await expect(
         tl.call(usnAddr, 0, NONE, enc('setAdmin', [safe.address]))
       ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
-      await tl.connect(guardian).guardianCall(usnAddr, NONE, enc('pause'));
+      await tl.call(usnAddr, 0, NONE, enc('pause'));
       expect(await usn.paused()).to.equal(true);
     });
 
     it('a timelock that does not own USN cannot do anything to it', async function () {
       const TL = await ethers.getContractFactory('SelectiveTimelock');
-      const other = (await TL.deploy(
+      const otherTl = (await TL.deploy(
         safe.address
       )) as unknown as SelectiveTimelock;
-      await other.setGuardian(guardian.address, true);
-      await other.setGuardianSelector(usnAddr, sel('pause'), true);
       await expect(
-        other.call(usnAddr, 0, NONE, enc('pause'))
-      ).to.be.revertedWithCustomError(other, 'CallReverted');
-      await expect(
-        other.connect(guardian).guardianCall(usnAddr, NONE, enc('pause'))
-      ).to.be.revertedWithCustomError(other, 'CallReverted');
+        otherTl.call(usnAddr, 0, NONE, enc('pause'))
+      ).to.be.revertedWithCustomError(otherTl, 'CallReverted');
       expect(await usn.paused()).to.equal(false);
     });
 
-    it('renouncing the timelock itself orphans USN as well (same exposure as GenericTimelock)', async function () {
+    it('renouncing the timelock itself orphans USN (same exposure as GenericTimelock)', async function () {
       await tl.renounceOwnership();
       expect(await tl.owner()).to.equal(ethers.ZeroAddress);
       await expect(
-        tl.call(usnAddr, 0, NONE, enc('unpause'))
+        tl.call(usnAddr, 0, NONE, enc('pause'))
       ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
-      // only guardians retain a path, and only the allow-list
-      await tl.connect(guardian).guardianCall(usnAddr, NONE, enc('pause'));
-      expect(await usn.paused()).to.equal(true);
+      await expect(usn.connect(safe).pause()).to.be.revertedWithCustomError(
+        usn,
+        'OwnableUnauthorizedAccount'
+      );
     });
   });
 });

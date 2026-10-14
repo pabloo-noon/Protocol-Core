@@ -10,17 +10,15 @@ import "../interfaces/ISelectiveTimelock.sol";
 ///         of one global value. Queues arbitrary (target, value, signature,
 ///         data, eta) calls and executes them after that pair's delay. Pairs
 ///         with a delay of 0 may also be executed immediately by the owner
-///         through `call`. A guardian set may execute an explicit allow-list
-///         of zero-delay pairs (pause, blacklist) instantly through
-///         `guardianCall`. Every forwarded call runs from this contract's
+///         through `call`. Every forwarded call runs from this contract's
 ///         context, so it is the owner-of-record of the target.
 ///
 /// Intended wiring for USN:
-///   24h      : USN.setAdmin(address)            — the admin is the sole minter
-///   24h      : USN.transferOwnership(address)   — otherwise the owner could hand USN
-///   24h      : USN.renounceOwnership()            to a fresh owner and call setAdmin at once
-///   guardian : USN.pause(), USN.blacklistAccount(address)
-///   direct   : everything else the owner can do on USN
+///   24h    : USN.setAdmin(address)            — the admin is the sole minter
+///   24h    : USN.transferOwnership(address)   — otherwise the owner could hand USN
+///   24h    : USN.renounceOwnership()            to a fresh owner and call setAdmin at once
+///   direct : everything else the owner can do on USN (pause, blacklist,
+///            whitelist, setRateLimiter, peers, enforced options, ...)
 ///
 /// Delay guarantees an integrator should reason about:
 ///   - Every delay is in [0, MAX_DELAY]. 0 means "direct".
@@ -30,9 +28,6 @@ import "../interfaces/ISelectiveTimelock.sol";
 ///     executeDelayChange(target, selector) applies it once the current delay
 ///     has elapsed. Reducing setAdmin from 24h to 0 thus takes 24h. Putting a
 ///     new pair under a delay (current 0) is immediate.
-///   - A pair can never be both delayed and guardian-callable:
-///     setGuardianSelector refuses a delayed pair and guardianCall re-checks
-///     the delay at call time.
 ///   - Ownership rotation on this contract uses Ownable2Step (transfer +
 ///     accept) but is NOT timelocked; the new owner inherits the same map.
 contract SelectiveTimelock is Ownable2Step, ReentrancyGuard, ISelectiveTimelock {
@@ -62,19 +57,13 @@ contract SelectiveTimelock is Ownable2Step, ReentrancyGuard, ISelectiveTimelock 
     ///         delay change may be executed. 0 iff no change is pending.
     mapping(address => mapping(bytes4 => uint256)) public pendingDelayEta;
 
-    /// @notice (target, selector) pairs a guardian may call immediately.
-    mapping(address => mapping(bytes4 => bool)) public guardianSelector;
-
-    /// @notice Addresses allowed to use `guardianCall`.
-    mapping(address => bool) public isGuardian;
-
     /// @notice opHash => queued flag. True once queued, false after execute/cancel.
     mapping(bytes32 => bool) public queued;
 
     // ============ Constructor ============
 
     /// @param initialOwner Address that can queue / execute / cancel operations,
-    ///        run direct calls, and administer delays and guardians.
+    ///        run direct calls, and administer delays.
     constructor(address initialOwner) Ownable(initialOwner) {}
 
     // ============ Delay management (self-timelocked, explicit two-step) ============
@@ -130,29 +119,6 @@ contract SelectiveTimelock is Ownable2Step, ReentrancyGuard, ISelectiveTimelock 
         delete pendingDelay[target][selector];
         delete pendingDelayEta[target][selector];
         emit DelayChangeCancelled(target, selector, cancelledDelay);
-    }
-
-    // ============ Guardian management ============
-
-    /// @notice Allow or disallow guardians to call (target, selector) instantly.
-    ///         A delayed pair can never be allow-listed.
-    function setGuardianSelector(
-        address target,
-        bytes4 selector,
-        bool allowed
-    ) external onlyOwner {
-        if (target == address(0)) revert ZeroAddress();
-        uint256 d = delay[target][selector];
-        if (allowed && d != 0) revert SelectorIsDelayed(target, selector, d);
-        guardianSelector[target][selector] = allowed;
-        emit GuardianSelectorUpdated(target, selector, allowed);
-    }
-
-    /// @notice Add or remove a guardian.
-    function setGuardian(address guardian, bool allowed) external onlyOwner {
-        if (guardian == address(0)) revert ZeroAddress();
-        isGuardian[guardian] = allowed;
-        emit GuardianUpdated(guardian, allowed);
     }
 
     // ============ Queue / Execute / Cancel ============
@@ -252,29 +218,6 @@ contract SelectiveTimelock is Ownable2Step, ReentrancyGuard, ISelectiveTimelock 
         if (!ok) revert CallReverted(returnData);
 
         emit DirectCall(target, value, signature, data, returnData);
-    }
-
-    // ============ Guardian path (instant, allow-listed, no value) ============
-
-    /// @notice A guardian executes an allow-listed zero-delay (target, selector) immediately.
-    /// @param signature / data Same conventions as `queue`.
-    function guardianCall(
-        address target,
-        string calldata signature,
-        bytes calldata data
-    ) external nonReentrant returns (bytes memory returnData) {
-        if (!isGuardian[msg.sender]) revert NotGuardian(msg.sender);
-        bytes4 selector = _selector(signature, data);
-        uint256 d = delay[target][selector];
-        if (d != 0) revert SelectorIsDelayed(target, selector, d);
-        if (!guardianSelector[target][selector]) revert SelectorNotGuardian(target, selector);
-
-        bytes memory callData = _buildCalldata(signature, data);
-        bool ok;
-        (ok, returnData) = target.call(callData);
-        if (!ok) revert CallReverted(returnData);
-
-        emit GuardianCall(msg.sender, target, signature, data, returnData);
     }
 
     // ============ Views ============

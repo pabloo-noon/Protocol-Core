@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 /// @title ISelectiveTimelock
 /// @notice Events and errors emitted by SelectiveTimelock. Same shapes as
 ///         IGenericTimelock for the queue / execute / cancel pipeline, with the
-///         delay administration keyed by (target, selector) and two extra
-///         paths: the owner's direct `call` and the guardians' `guardianCall`.
+///         delay administration keyed by (target, selector) and one extra
+///         path: the owner's direct `call` for zero-delay pairs.
 interface ISelectiveTimelock {
     // ============ Events ============
 
@@ -67,25 +67,6 @@ interface ISelectiveTimelock {
         bytes returnData
     );
 
-    /// @notice Emitted when a guardian executes an allow-listed call.
-    event GuardianCall(
-        address indexed guardian,
-        address indexed target,
-        string signature,
-        bytes data,
-        bytes returnData
-    );
-
-    /// @notice Emitted when a (target, selector) is added to / removed from the guardian allow-list.
-    event GuardianSelectorUpdated(
-        address indexed target,
-        bytes4 indexed selector,
-        bool allowed
-    );
-
-    /// @notice Emitted when a guardian is added or removed.
-    event GuardianUpdated(address indexed guardian, bool allowed);
-
     // ============ Errors ============
 
     /// @notice Given delay is outside [0, MAX_DELAY].
@@ -124,21 +105,15 @@ interface ISelectiveTimelock {
     ///         delay change's eta.
     error DelayChangeNotReady(uint256 eta, uint256 nowTs);
 
-    /// @notice execute / call / guardianCall: the forwarded target call reverted.
+    /// @notice execute / call: the forwarded target call reverted.
     error CallReverted(bytes returnData);
 
-    /// @notice call / guardianCall: this (target, selector) carries a delay; use queue.
+    /// @notice call: this (target, selector) carries a delay; use queue.
     error SelectorIsDelayed(address target, bytes4 selector, uint256 delay);
-
-    /// @notice guardianCall: this (target, selector) is not on the guardian allow-list.
-    error SelectorNotGuardian(address target, bytes4 selector);
-
-    /// @notice guardianCall: caller is not a guardian.
-    error NotGuardian(address caller);
 
     /// @notice Raw calldata shorter than a selector (1 to 3 bytes).
     error BadCalldata();
 
-    /// @notice Zero address given where a target or guardian is required.
+    /// @notice Zero address given where a target is required.
     error ZeroAddress();
 }
