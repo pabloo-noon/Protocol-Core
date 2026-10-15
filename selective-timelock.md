@@ -50,7 +50,7 @@ The timelock only delays the selectors it is told to. Everything below is covere
 
 - **`transferOwnership` and `renounceOwnership` of the target must carry a delay at least as long as the longest delayed selector on that target.** With `transferOwnership` at 0 the Safe can `call` it, accept from the Safe and call `setAdmin` directly, a few seconds later (test "BYPASS: with transferOwnership at delay 0"). With `renounceOwnership` at 0 the Safe can orphan USN at once: no owner, so no `setAdmin`, no `unpause`, ever. The deploy script sets both to 24h. The contract does not enforce this invariant, so keep it in mind whenever a delay is lowered.
 - **Lowering any delay waits the current delay of that pair.** Including lowering `transferOwnership` to 0. So the bypass above can only be reached after a 24h public window.
-- **The timelock's own ownership (Ownable2Step) is not delayed**, same as GenericTimelock. A new owner inherits the map. `renounceOwnership` on the timelock orphans USN. Treat the Safe's ownership of the timelock as governance, not as something the timelock defends against.
+- **The timelock's own ownership (Ownable2Step) is not delayed**, same as GenericTimelock. A new owner inherits the map. `renounceOwnership` on the timelock is disabled (reverts `RenounceDisabled`), so USN cannot be orphaned through the timelock. Treat the Safe's ownership of the timelock as governance, not as something the timelock defends against.
 - **The timelock cannot administer itself through `call`.** Its own functions are `onlyOwner`, and a forwarded call has `msg.sender == timelock`, so `call(timelock, scheduleDelayChange(...))` reverts.
 - **Selector gating is by selector only.** A function that reaches the same state through another selector is not covered. On USN the admin is set only by `setAdmin`, and the proxy implementation is controlled by the ProxyAdmin behind the 48h upgrade Timelock, which this contract does not touch.
 - **Delay changes apply to operations queued afterwards.** A queued operation keeps its eta. Raising a delay therefore does not stretch an operation that was already queued under the old delay.
@@ -79,7 +79,17 @@ Leave the timelock: queue `transferOwnership(newOwner)` with eta ≥ now + its d
 
 ## Deployment
 
-`scripts/deploy-selective-timelock.ts` deploys with the deployer as initial owner, sets the 24h delays, then offers ownership to the Safe. The Safe finishes with one batch:
+`scripts/deploy-selective-timelock.ts` deploys with the deployer as initial owner, sets the 24h delays, then offers ownership to the Safe.
+
+**Before the Safe accepts**, run the verifier against the deployed address. It fails if anything is pending, so the Safe never inherits a delay change or a queued operation it did not author:
+
+```
+TIMELOCK=0x… npx hardhat run scripts/verify-selective-timelock.ts --network mainnet
+```
+
+It checks: `pendingOwner == Safe`; the nine selectors carry exactly 24h; no `pendingDelayEta` on any pair ever touched (scanned from `DelayChangeScheduled` events); no operation still `queued` (scanned from `OperationQueued` events); nothing else was ever scheduled; USN is still owned by the Safe. Re-run it after the hand-over batch: it then expects `owner == Safe` and `USN.owner == timelock`.
+
+The Safe finishes with one batch:
 
 1. `timelock.acceptOwnership()`
 2. `USN.transferOwnership(timelock)`

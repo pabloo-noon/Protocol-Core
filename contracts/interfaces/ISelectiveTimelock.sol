@@ -116,4 +116,7 @@ interface ISelectiveTimelock {
 
     /// @notice Zero address given where a target is required.
     error ZeroAddress();
+
+    /// @notice renounceOwnership is disabled on the timelock.
+    error RenounceDisabled();
 }

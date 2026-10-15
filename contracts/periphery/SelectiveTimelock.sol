@@ -30,6 +30,7 @@ import "../interfaces/ISelectiveTimelock.sol";
 ///     new pair under a delay (current 0) is immediate.
 ///   - Ownership rotation on this contract uses Ownable2Step (transfer +
 ///     accept) but is NOT timelocked; the new owner inherits the same map.
+///     renounceOwnership is disabled.
 contract SelectiveTimelock is Ownable2Step, ReentrancyGuard, ISelectiveTimelock {
     // ============ Constants ============
 
@@ -65,6 +66,12 @@ contract SelectiveTimelock is Ownable2Step, ReentrancyGuard, ISelectiveTimelock 
     /// @param initialOwner Address that can queue / execute / cancel operations,
     ///        run direct calls, and administer delays.
     constructor(address initialOwner) Ownable(initialOwner) {}
+
+    /// @notice Disabled. An ownerless timelock would leave the target without
+    ///         any owner path; rotate with transferOwnership + acceptOwnership.
+    function renounceOwnership() public view override onlyOwner {
+        revert RenounceDisabled();
+    }
 
     // ============ Delay management (self-timelocked, explicit two-step) ============
 

@@ -86,7 +86,7 @@ async function main() {
   await (await tl.transferOwnership(SAFE)).wait();
   console.log(`  ownership offered to ${SAFE} ✓ (pendingOwner)`);
   console.log(
-    `\nNext (Safe batch): timelock.acceptOwnership(); USN.transferOwnership(${addr}); timelock.call(USN, 0, "acceptOwnership()", 0x)`
+    `\nNext: TIMELOCK=${addr} npx hardhat run scripts/verify-selective-timelock.ts --network <net>   (must print "clean" before the Safe signs)\nThen (Safe batch): timelock.acceptOwnership(); USN.transferOwnership(${addr}); timelock.call(USN, 0, "acceptOwnership()", 0x)`
   );
   console.log(
     `Verify: env -u HARDHAT_NETWORK npx hardhat verify --network <net> ${addr} ${deployer.address}`

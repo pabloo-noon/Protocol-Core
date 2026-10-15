@@ -579,16 +579,17 @@ describe('SelectiveTimelock', function () {
       expect(await usn.paused()).to.equal(false);
     });
 
-    it('renouncing the timelock itself orphans USN (same exposure as GenericTimelock)', async function () {
-      await tl.renounceOwnership();
-      expect(await tl.owner()).to.equal(ethers.ZeroAddress);
-      await expect(
-        tl.call(usnAddr, 0, NONE, enc('pause'))
-      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
-      await expect(usn.connect(safe).pause()).to.be.revertedWithCustomError(
-        usn,
-        'OwnableUnauthorizedAccount'
+    it('renounceOwnership on the timelock is disabled, so USN can never be orphaned that way', async function () {
+      await expect(tl.renounceOwnership()).to.be.revertedWithCustomError(
+        tl,
+        'RenounceDisabled'
       );
+      await expect(
+        tl.connect(other).renounceOwnership()
+      ).to.be.revertedWithCustomError(tl, 'OwnableUnauthorizedAccount');
+      expect(await tl.owner()).to.equal(safe.address);
+      await tl.call(usnAddr, 0, NONE, enc('pause'));
+      expect(await usn.paused()).to.equal(true);
     });
   });
 
