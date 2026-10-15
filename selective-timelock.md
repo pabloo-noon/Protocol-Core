@@ -14,9 +14,16 @@ Both paths are owner-only (the Safe). `signature` / `data` follow the GenericTim
 | function | delay | why |
 |---|---|---|
 | `setAdmin(address)` | 24h | the admin is the sole minter |
-| `transferOwnership(address)` | 24h | otherwise the Safe could hand USN to a fresh owner and call `setAdmin` in the same block |
-| `renounceOwnership()` | 24h | same |
-| everything else (`pause`, `unpause`, `blacklistAccount`, `unblacklistAccount`, whitelist, `setRateLimiter`, peers, enforced options, `setDelegate`, …) | 0 | Safe, instant, through `call` |
+| `configureHyperlane(address)` | 24h | a hostile mailbox calls `handle()` and mints any amount |
+| `configureISM(address)` | 24h | a permissive ISM lets forged Hyperlane messages through |
+| `registerHyperlaneRemoteToken(uint32,bytes32)` | 24h | a hostile remote token mints through a real message |
+| `setPeer(uint32,bytes32)` | 24h | a hostile LayerZero peer mints through `lzReceive` |
+| `setDelegate(address)` | 24h | the delegate rewrites DVN / receive-library config at the endpoint |
+| `setRateLimiter(address)` | 24h | `address(0)` removes the bridge caps |
+| `transferOwnership(address)`, `renounceOwnership()` | 24h | otherwise the Safe could hand USN to a fresh owner and do any of the above in the same block |
+| `pause`, `unpause`, `blacklistAccount`, `unblacklistAccount`, whitelist, `enablePermissionless`, `setEnforcedOptions`, `setMsgInspector`, `setPreCrime` | 0 | reversible, cannot mint; Safe, instant, through `call` |
+
+Closing a route is an emergency action too (`setPeer(eid, 0)`, `registerHyperlaneRemoteToken(domain, dEaD)`), and it now waits 24h. Use `pause()` for the immediate stop; it is instant and covers every transport.
 
 Pause and blacklist stay instant because their delay is 0; no separate guardian role is needed, the Safe is the guardian.
 

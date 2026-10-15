@@ -1,6 +1,8 @@
 /**
  * Deploy a SelectiveTimelock in front of USN and wire it:
- *   delay 24h : USN.setAdmin, USN.transferOwnership, USN.renounceOwnership
+ *   delay 24h : every owner function that reaches minting or the bridge trust set —
+ *               setAdmin, configureHyperlane, configureISM, registerHyperlaneRemoteToken, setPeer, setDelegate,
+ *               setRateLimiter — plus transferOwnership / renounceOwnership (leaving the timelock)
  *   direct    : everything else (pause, unpause, blacklist, whitelist, ...) — the Safe calls them through timelock.call
  * The deployer is the initial owner so it can wire the map in the same run (a fresh pair has delay 0, so
  * scheduleDelayChange + executeDelayChange apply at once), then hands the timelock to the Safe (Ownable2Step).
@@ -26,10 +28,26 @@ const USN_ABI = [
   'function owner() view returns (address)',
   'function admin() view returns (address)',
   'function setAdmin(address)',
+  'function configureHyperlane(address)',
+  'function configureISM(address)',
+  'function registerHyperlaneRemoteToken(uint32,bytes32)',
+  'function setPeer(uint32,bytes32)',
+  'function setDelegate(address)',
+  'function setRateLimiter(address)',
   'function transferOwnership(address)',
   'function renounceOwnership()',
 ];
-const DELAYED = ['setAdmin', 'transferOwnership', 'renounceOwnership'];
+const DELAYED = [
+  'setAdmin',
+  'configureHyperlane',
+  'configureISM',
+  'registerHyperlaneRemoteToken',
+  'setPeer',
+  'setDelegate',
+  'setRateLimiter',
+  'transferOwnership',
+  'renounceOwnership',
+];
 
 async function main() {
   const [deployer] = await ethers.getSigners();

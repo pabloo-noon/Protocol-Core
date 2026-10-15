@@ -14,6 +14,17 @@ const OWNER_DELAY = 48n * HOUR; // USN.transferOwnership / renounceOwnership
 const MAX_DELAY = 30n * DAY;
 const GRACE = 14n * DAY;
 const NONE = ''; // empty signature: data is raw calldata
+// Every owner function on USN that reaches minting or the bridge trust set.
+const MINT_PATHS = [
+  'setAdmin', // the admin is the sole minter
+  'configureHyperlane', // a hostile mailbox calls handle() and mints
+  'configureISM', // a permissive ISM lets forged Hyperlane messages through
+  'registerHyperlaneRemoteToken', // a hostile remote token mints through a real message
+  'setPeer', // a hostile LayerZero peer mints through lzReceive
+  'setDelegate', // the delegate rewrites DVN / receive-library config at the endpoint
+  'setRateLimiter', // address(0) removes the bridge caps
+];
+const OWNER_PATHS = ['transferOwnership', 'renounceOwnership']; // leaving the timelock
 
 describe('SelectiveTimelock', function () {
   let safe: HardhatEthersSigner;
@@ -62,10 +73,9 @@ describe('SelectiveTimelock', function () {
     tl = (await TL.deploy(safe.address)) as unknown as SelectiveTimelock;
     tlAddr = await tl.getAddress();
 
-    // wiring: setAdmin 24h; transferOwnership / renounceOwnership 48h; everything else direct
-    await setDelay('setAdmin', ADMIN_DELAY);
-    await setDelay('transferOwnership', OWNER_DELAY);
-    await setDelay('renounceOwnership', OWNER_DELAY);
+    // wiring: mint paths 24h; transferOwnership / renounceOwnership 48h; everything else direct
+    for (const fn of MINT_PATHS) await setDelay(fn, ADMIN_DELAY);
+    for (const fn of OWNER_PATHS) await setDelay(fn, OWNER_DELAY);
 
     // hand USN over (Ownable2Step): Safe transfers, timelock accepts through the direct path
     await usn.transferOwnership(tlAddr);
@@ -78,12 +88,23 @@ describe('SelectiveTimelock', function () {
       expect(await tl.owner()).to.equal(safe.address);
       expect(await tl.MAX_DELAY()).to.equal(MAX_DELAY);
       expect(await tl.GRACE_PERIOD()).to.equal(GRACE);
-      expect(await tl.delay(usnAddr, sel('setAdmin'))).to.equal(ADMIN_DELAY);
-      expect(await tl.delay(usnAddr, sel('transferOwnership'))).to.equal(
-        OWNER_DELAY
-      );
-      expect(await tl.delay(usnAddr, sel('pause'))).to.equal(0);
-      expect(await tl.delay(usnAddr, sel('blacklistAccount'))).to.equal(0);
+      for (const fn of MINT_PATHS)
+        expect(await tl.delay(usnAddr, sel(fn)), fn).to.equal(ADMIN_DELAY);
+      for (const fn of OWNER_PATHS)
+        expect(await tl.delay(usnAddr, sel(fn)), fn).to.equal(OWNER_DELAY);
+      for (const fn of [
+        'pause',
+        'unpause',
+        'blacklistAccount',
+        'unblacklistAccount',
+        'addToWhitelist',
+        'removeFromWhitelist',
+        'enablePermissionless',
+        'setEnforcedOptions',
+        'setMsgInspector',
+        'setPreCrime',
+      ])
+        expect(await tl.delay(usnAddr, sel(fn)), fn).to.equal(0);
     });
     it('delayFor resolves both calldata conventions', async function () {
       expect(await tl.delayFor(usnAddr, NONE, enc('pause'))).to.equal(0);
@@ -193,7 +214,7 @@ describe('SelectiveTimelock', function () {
     });
     it('bubbles target reverts and checks value / calldata shape', async function () {
       await expect(
-        tl.call(usnAddr, 0, NONE, enc('setRateLimiter', [stranger.address]))
+        tl.call(usnAddr, 0, NONE, enc('unpause')) // USN: ExpectedPause
       ).to.be.revertedWithCustomError(tl, 'CallReverted');
       await expect(
         tl.call(usnAddr, 1, NONE, enc('pause'))
@@ -371,13 +392,13 @@ describe('SelectiveTimelock', function () {
       await tl.executeDelayChange(usnAddr, sel('setAdmin'));
       expect(await tl.delay(usnAddr, sel('setAdmin'))).to.equal(72n * HOUR);
       // fresh pair: current 0 -> executable right away
-      await tl.scheduleDelayChange(usnAddr, sel('setRateLimiter'), 6n * HOUR);
-      await tl.executeDelayChange(usnAddr, sel('setRateLimiter'));
-      expect(await tl.delay(usnAddr, sel('setRateLimiter'))).to.equal(
+      await tl.scheduleDelayChange(usnAddr, sel('addToWhitelist'), 6n * HOUR);
+      await tl.executeDelayChange(usnAddr, sel('addToWhitelist'));
+      expect(await tl.delay(usnAddr, sel('addToWhitelist'))).to.equal(
         6n * HOUR
       );
       await expect(
-        tl.call(usnAddr, 0, NONE, enc('setRateLimiter', [stranger.address]))
+        tl.call(usnAddr, 0, NONE, enc('addToWhitelist', [stranger.address]))
       ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
     });
     it('one pending change per pair; cancel clears it', async function () {
@@ -703,6 +724,128 @@ describe('SelectiveTimelock', function () {
       await tl.executeDelayChange(usnAddr, sel('pause'));
       await tl.call(usnAddr, 0, 'pause()', '0x');
       expect(await usn.paused()).to.equal(true);
+    });
+  });
+
+  describe('mint-equivalent owner functions are delayed', function () {
+    const MILLION = ethers.parseUnits('1000000', 18);
+    const b32 = (a: string) => ethers.zeroPadValue(a, 32);
+    const sample: Record<string, any[]> = {
+      setAdmin: ['0x000000000000000000000000000000000000dEaD'],
+      configureHyperlane: ['0x000000000000000000000000000000000000dEaD'],
+      configureISM: ['0x000000000000000000000000000000000000dEaD'],
+      registerHyperlaneRemoteToken: [1, ethers.zeroPadValue('0xdead', 32)],
+      setPeer: [30101, ethers.zeroPadValue('0xdead', 32)],
+      setDelegate: ['0x000000000000000000000000000000000000dEaD'],
+      setRateLimiter: [ethers.ZeroAddress],
+    };
+
+    it('every mint path is refused on the direct path and needs a 24h eta in the queue', async function () {
+      for (const fn of MINT_PATHS) {
+        const data = enc(fn, sample[fn]);
+        await expect(tl.call(usnAddr, 0, NONE, data), fn)
+          .to.be.revertedWithCustomError(tl, 'SelectorIsDelayed')
+          .withArgs(usnAddr, sel(fn), ADMIN_DELAY);
+        await expect(
+          tl.queue(usnAddr, 0, NONE, data, (await now()) + ADMIN_DELAY - 1n),
+          fn
+        ).to.be.revertedWithCustomError(tl, 'EtaTooSoon');
+      }
+      expect(await usn.admin()).to.equal(safe.address);
+      expect(await usn.hyperlaneEnabled()).to.equal(false);
+    });
+
+    it('BYPASS: with configureHyperlane + registerHyperlaneRemoteToken at delay 0, the owner mints any amount through a hostile mailbox', async function () {
+      for (const fn of ['configureHyperlane', 'registerHyperlaneRemoteToken'])
+        await tl.scheduleDelayChange(usnAddr, sel(fn), 0);
+      await time.increase(ADMIN_DELAY);
+      for (const fn of ['configureHyperlane', 'registerHyperlaneRemoteToken'])
+        await tl.executeDelayChange(usnAddr, sel(fn));
+      // "mailbox" = an EOA the attacker controls; "remote token" = anything they say
+      await tl.call(
+        usnAddr,
+        0,
+        NONE,
+        enc('configureHyperlane', [other.address])
+      );
+      await tl.call(
+        usnAddr,
+        0,
+        NONE,
+        enc('registerHyperlaneRemoteToken', [1, b32(other.address)])
+      );
+      const message = ethers.concat([
+        b32(other.address),
+        ethers.toBeHex(MILLION, 32),
+      ]);
+      await usn.connect(other).handle(1, b32(other.address), message);
+      expect(await usn.balanceOf(other.address)).to.equal(MILLION); // minted with no admin involved
+    });
+
+    it('with the Hyperlane config delayed, the same hijack is refused and the queue announces it 24h ahead', async function () {
+      await expect(
+        tl.call(usnAddr, 0, NONE, enc('configureHyperlane', [other.address]))
+      ).to.be.revertedWithCustomError(tl, 'SelectorIsDelayed');
+      await expect(
+        usn.connect(other).handle(1, b32(other.address), '0x')
+      ).to.be.revertedWithCustomError(usn, 'OnlyMailboxAllowed');
+      const eta = (await now()) + ADMIN_DELAY + 60n;
+      await tl.queue(
+        usnAddr,
+        0,
+        NONE,
+        enc('configureHyperlane', [other.address]),
+        eta
+      );
+      // the Safe can cancel in the window, and pause meanwhile
+      await tl.call(usnAddr, 0, 'pause()', '0x');
+      await tl.cancel(
+        usnAddr,
+        0,
+        NONE,
+        enc('configureHyperlane', [other.address]),
+        eta
+      );
+      await time.increaseTo(eta);
+      await expect(
+        tl.execute(
+          usnAddr,
+          0,
+          NONE,
+          enc('configureHyperlane', [other.address]),
+          eta
+        )
+      ).to.be.revertedWithCustomError(tl, 'OperationNotQueued');
+      expect(await usn.hyperlaneEnabled()).to.equal(false);
+    });
+
+    it('setRateLimiter(0) and setPeer / setDelegate go through the queue like setAdmin', async function () {
+      for (const fn of ['setRateLimiter', 'setPeer', 'setDelegate']) {
+        const data = enc(fn, sample[fn]);
+        const eta = (await now()) + ADMIN_DELAY + 60n;
+        await tl.queue(usnAddr, 0, NONE, data, eta);
+        await expect(
+          tl.execute(usnAddr, 0, NONE, data, eta),
+          fn
+        ).to.be.revertedWithCustomError(tl, 'OperationNotReady');
+      }
+    });
+
+    it('reversible, non-minting owner functions stay direct (enforced options, inspector, whitelist)', async function () {
+      await tl.call(
+        usnAddr,
+        0,
+        NONE,
+        enc('setMsgInspector', [ethers.ZeroAddress])
+      );
+      await tl.call(usnAddr, 0, NONE, enc('setEnforcedOptions', [[]]));
+      await tl.call(
+        usnAddr,
+        0,
+        NONE,
+        enc('addToWhitelist', [stranger.address])
+      );
+      expect(await usn.isWhitelisted(stranger.address)).to.equal(true);
     });
   });
 });
