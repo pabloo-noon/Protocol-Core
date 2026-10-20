@@ -11,7 +11,7 @@
  *   dormant     : no DirectCall / OperationExecuted ever emitted (a fresh timelock has done nothing)
  *
  *   TIMELOCK=0x… npx hardhat run scripts/verify-selective-timelock.ts --network mainnet
- * Env: TIMELOCK (required), SAFE, USN, DELAY (default 86400), FROM_BLOCK (default: latest - 200k blocks; pass the deployment block for older timelocks).
+ * Env: TIMELOCK (required), SAFE, USN, DELAY (default 86400), FROM_BLOCK (default: latest - 50k blocks; pass the deployment block for older timelocks).
  */
 import { ethers } from 'hardhat';
 
@@ -88,18 +88,26 @@ async function main() {
   // ---- events: every pair ever scheduled, every op ever queued
   let from = Number(process.env.FROM_BLOCK ?? 0);
   if (!from) {
-    // default window: the last 200k blocks (~1 month); pass FROM_BLOCK for older deployments
+    // default window: the last 50k blocks (~1 week); pass FROM_BLOCK=<deployment block> for older deployments
     const latest = await p.getBlockNumber();
-    from = Math.max(0, latest - 200_000);
+    from = Math.max(0, latest - 50_000);
   }
-  const scheduled = await tl.queryFilter(
-    tl.filters.DelayChangeScheduled(),
-    from
-  );
-  const updated = await tl.queryFilter(tl.filters.DelayUpdated(), from);
-  const queuedEv = await tl.queryFilter(tl.filters.OperationQueued(), from);
-  const executed = await tl.queryFilter(tl.filters.OperationExecuted(), from);
-  const direct = await tl.queryFilter(tl.filters.DirectCall(), from);
+  // public RPCs cap eth_getLogs at ~10k blocks per call: walk the range in chunks
+  const latestBlock = await p.getBlockNumber();
+  const logs = async (filter: any) => {
+    const out: any[] = [];
+    for (let a = from; a <= latestBlock; a += 9_000) {
+      out.push(
+        ...(await tl.queryFilter(filter, a, Math.min(a + 8_999, latestBlock)))
+      );
+    }
+    return out;
+  };
+  const scheduled = await logs(tl.filters.DelayChangeScheduled());
+  const updated = await logs(tl.filters.DelayUpdated());
+  const queuedEv = await logs(tl.filters.OperationQueued());
+  const executed = await logs(tl.filters.OperationExecuted());
+  const direct = await logs(tl.filters.DirectCall());
   console.log(
     `events since block ${from}: DelayChangeScheduled ${scheduled.length}, DelayUpdated ${updated.length}, OperationQueued ${queuedEv.length}, OperationExecuted ${executed.length}, DirectCall ${direct.length}`
   );
